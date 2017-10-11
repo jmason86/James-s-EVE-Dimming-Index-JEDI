@@ -5,6 +5,7 @@
 # Cache #
 ########
 *cache*
+.ipynb*
 
 # OS generated files #
 ######################
