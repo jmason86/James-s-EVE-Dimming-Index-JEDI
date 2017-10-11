@@ -1,0 +1,13 @@
+# Compiled source #
+###################
+*.pyc
+
+# Cache #
+########
+*cache*
+
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
