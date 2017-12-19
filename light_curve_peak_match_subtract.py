@@ -15,8 +15,8 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
     """Align the peak of a second light curve to the first, scale its magnitude to match, and subtract it off.
 
     Inputs:
-        light_curve_to_subtract_from_df [pd DataFrame]: A pandas DataFrame with a DatetimeIndex and a columns for intensity.
-        light_curve_to_subtract_with_df [pd DataFrame]: A pandas DataFrame with a DatetimeIndex and a columns for intensity.
+        light_curve_to_subtract_from_df [pd DataFrame]: A pandas DataFrame with a DatetimeIndex and a column for intensity.
+        light_curve_to_subtract_with_df [pd DataFrame]: A pandas DataFrame with a DatetimeIndex and a column for intensity.
         estimated_time_of_peak [metatime]: The estimated time that the peak should occur. This could come from, e.g., GOES/XRS.
 
     Optional Inputs:
