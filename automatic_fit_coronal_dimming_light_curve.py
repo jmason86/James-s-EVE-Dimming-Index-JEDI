@@ -86,7 +86,7 @@ def automatic_fit_coronal_dimming_light_curve(light_curve_df, minimum_score=0.3,
         logger.info("Validation curve complete.")
 
     if plots_save_path:
-        plt.style.use('jpm-light')
+        plt.style.use('jpm-transparent-light')
         plt.plot(gamma, np.median(train_score, 1), label='training score')
         plt.plot(gamma, np.median(val_score, 1), label='validation score')
         ax = plt.axes()

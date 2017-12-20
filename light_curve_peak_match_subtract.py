@@ -92,7 +92,7 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
         seconds_shift_string += str(int(seconds_shift))
         scale_factor_string = latex_float(scale_factor)
 
-        plt.style.use('jpm-light')
+        plt.style.use('jpm-transparent-light')
         from matplotlib import dates
 
         fig, ax = plt.subplots()
