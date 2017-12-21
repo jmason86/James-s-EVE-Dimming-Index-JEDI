@@ -10,7 +10,7 @@ __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
 
 
-def dimming_duration(light_curve_df, crossing_value, earliest_allowed_time,
+def determine_dimming_duration(light_curve_df, crossing_value, earliest_allowed_time,
                      plot_path_filename=None, verbose=False):
     """Find the duration of dimming in a light curve, if any.
     Assumes light curve is normalized such that pre-flare = 0%.
@@ -31,15 +31,15 @@ def dimming_duration(light_curve_df, crossing_value, earliest_allowed_time,
         None
 
     Example:
-        duration_seconds = dimming_duration(light_curve_df, 0.0, pd.Timestamp('2012-04-15 17:52:20.0'),
-                                            plot_path_filename='./bla.png',
-                                            verbose=True)
+        duration_seconds = determine_dimming_duration(light_curve_df, 0.0, pd.Timestamp('2012-04-15 17:52:20.0'),
+                                                      plot_path_filename='./bla.png',
+                                                      verbose=True)
     """
 
     # Prepare the logger for verbose
     if verbose:
         # TODO: Update the path
-        logger = JpmLogger(filename='dimming_duration_log', path='/Users/jmason86/Desktop/')
+        logger = JpmLogger(filename='determine_dimming_duration_log', path='/Users/jmason86/Desktop/')
 
     # Smooth the light curve with a 10-minute rolling mean (assuming input data are 1 minute each)
     light_curve_df['smooth'] = light_curve_df.rolling(10, center=True).mean()
