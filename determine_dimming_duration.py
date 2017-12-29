@@ -10,7 +10,7 @@ __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
 
 
-def determine_dimming_duration(light_curve_df, crossing_value, earliest_allowed_time,
+def determine_dimming_duration(light_curve_df, earliest_allowed_time,
                                plot_path_filename=None, verbose=False):
     """Find the duration of dimming in a light curve, if any.
     Assumes light curve is normalized such that pre-flare = 0%.
