@@ -17,7 +17,7 @@ def determine_dimming_duration(light_curve_df, crossing_value, earliest_allowed_
 
     Inputs:
         light_curve_df [pd DataFrame]:    A pandas DataFrame with a DatetimeIndex and a column for intensity.
-        earliest_allowed_time [metatime]: The function won't return an index corresponding to a time any earlier than this.
+        earliest_allowed_time [metatime]: The function won't return a duration if the only 0 crossings are earlier than this.
 
     Optional Inputs:
         plot_path_filename [str]: Set to a path and filename in order to save the summary plot to disk.
