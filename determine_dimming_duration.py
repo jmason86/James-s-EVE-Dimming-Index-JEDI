@@ -10,19 +10,23 @@ __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
 
 
-def determine_dimming_duration(light_curve_df, earliest_allowed_time,
+def determine_dimming_duration(light_curve_df,
+                               earliest_allowed_time=None, smooth_points=0,
                                plot_path_filename=None, verbose=False):
     """Find the duration of dimming in a light curve, if any.
     Assumes light curve is normalized such that pre-flare = 0%.
 
     Inputs:
         light_curve_df [pd DataFrame]:    A pandas DataFrame with a DatetimeIndex and a column for intensity.
-        earliest_allowed_time [metatime]: The function won't return a duration if the only 0 crossings are earlier than this.
 
     Optional Inputs:
-        plot_path_filename [str]: Set to a path and filename in order to save the summary plot to disk.
-                                  Default is None, meaning the plot will not be saved to disk.
-        verbose [bool]:           Set to log the processing messages to disk and console. Default is False.
+        earliest_allowed_time [metatime]: The function won't return a duration if the only 0 crossings are earlier than this.
+                                          Default is None, meaning the beginning of the light_curve_df.
+        smooth_points [integer]:          Used to apply a rolling mean with the number of points (indices) specified.
+                                          Default is 0, meaning no smoothing will be performed.
+        plot_path_filename [str]:         Set to a path and filename in order to save the summary plot to disk.
+                                          Default is None, meaning the plot will not be saved to disk.
+        verbose [bool]:                   Set to log the processing messages to disk and console. Default is False.
 
     Outputs:
         duration_seconds [integer]: The duration of dimming in seconds.
@@ -31,22 +35,29 @@ def determine_dimming_duration(light_curve_df, earliest_allowed_time,
         None
 
     Example:
-        duration_seconds = determine_dimming_duration(light_curve_df, 0.0, pd.Timestamp('2012-04-15 17:52:20.0'),
+        duration_seconds = determine_dimming_duration(light_curve_df,
                                                       plot_path_filename='./bla.png',
                                                       verbose=True)
     """
+
+    # If no earliest_allowed_time set, then set it to beginning of light_curve_df
+    if not earliest_allowed_time:
+        earliest_allowed_time = pd.Timestamp(light_curve_df.index.values[0])
 
     # Prepare the logger for verbose
     if verbose:
         # TODO: Update the path
         logger = JpmLogger(filename='determine_dimming_duration_log', path='/Users/jmason86/Desktop/')
 
-    # Smooth the light curve with a 10-minute rolling mean (assuming input data are 1 minute each)
-    light_curve_df['smooth'] = light_curve_df.rolling(10, center=True).mean()
+    # Optionally smooth the light curve with a rolling mean
+    if smooth_points:
+        light_curve_df['smooth'] = light_curve_df.rolling(smooth_points, center=True).mean()
+    else:
+        light_curve_df['smooth'] = light_curve_df['irradiance']
+
     first_non_nan = light_curve_df['smooth'].first_valid_index()
     nan_indices = np.isnan(light_curve_df['smooth'])
     light_curve_df['smooth'][nan_indices] = light_curve_df['smooth'][first_non_nan]
-    light_curve_df.plot()
 
     # Find the indices where the light curve is closest to 0
     zero_crossing_indices = np.where(np.diff(np.signbit(light_curve_df['smooth'])))[0]
