@@ -18,7 +18,7 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
     Or, more generally, find the pre-peak level in a time series.
 
     Inputs:
-        light_curve_df [pd DataFrame]:           A pandas DataFrame with a DatetimeIndex and a column for intensity.
+        light_curve_df [pd DataFrame]:           A pandas DataFrame with a DatetimeIndex and a column for irradiance.
         estimated_time_of_peak_start [metatime]: The estimated time that the dramatic increase starts.
                                                  This could come from, e.g., GOES/XRS.
 
@@ -32,7 +32,7 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
         verbose [bool]:                    Set to log the processing messages to disk and console. Default is False.
 
     Outputs:
-        preflare_irradiance [float]: The identified pre-flare irradiance level in the same units as light_curve_df.intensity.
+        preflare_irradiance [float]: The identified pre-flare irradiance level in the same units as light_curve_df.irradiance.
 
     Optional Outputs:
         None

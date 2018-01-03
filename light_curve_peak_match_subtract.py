@@ -15,8 +15,8 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
     """Align the peak of a second light curve to the first, scale its magnitude to match, and subtract it off.
 
     Inputs:
-        light_curve_to_subtract_from_df [pd DataFrame]: A pandas DataFrame with a DatetimeIndex and a column for intensity.
-        light_curve_to_subtract_with_df [pd DataFrame]: A pandas DataFrame with a DatetimeIndex and a column for intensity.
+        light_curve_to_subtract_from_df [pd DataFrame]: A pandas DataFrame with a DatetimeIndex and a column for irradiance.
+        light_curve_to_subtract_with_df [pd DataFrame]: A pandas DataFrame with a DatetimeIndex and a column for irradiance.
         estimated_time_of_peak [metatime]: The estimated time that the peak should occur. This could come from, e.g., GOES/XRS.
 
     Optional Inputs:
@@ -48,7 +48,7 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
         # TODO: Update the path
         logger = JpmLogger(filename='light_curve_peak_match_subtract_log', path='/Users/jmason86/Desktop/')
 
-    # Detrend and find the peaks that are ≥ 95% of the max intensity within
+    # Detrend and find the peaks that are ≥ 95% of the max irradiance within
     if verbose:
         logger.info("Detrending light curves.")
     base_from = peakutils.baseline(light_curve_to_subtract_from_df)
@@ -75,7 +75,7 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
         logger.info("Shifting and scaling the light curve to subtract with.")
     shifted_with = light_curve_to_subtract_with_df.shift(index_shift)
 
-    # Scale the subtract_with light curve peak intensity to match the subtract_from light curve peak intensity
+    # Scale the subtract_with light curve peak irradiance to match the subtract_from light curve peak irradiance
     scale_factor = (detrend_from.values[peak_index_from] / shifted_with.values[peak_index_with + index_shift])[0]
     shifted_scaled_with = shifted_with * scale_factor
     light_curve_corrected_df = light_curve_to_subtract_from_df - shifted_scaled_with
@@ -104,7 +104,7 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
         plt.scatter(shifted_scaled_with.index[peak_index_with + index_shift], shifted_scaled_with.values[peak_index_with + index_shift], c='black')
         ax.legend(['subtract from', 'subtract with', 'result'], loc='best')
         plt.xlabel(estimated_time_of_peak)
-        plt.ylabel('Intensity [%]')
+        plt.ylabel('Irradiance [%]')
         plt.title('I: $\\times$' + scale_factor_string + ', t: ' + seconds_shift_string + ' s', color='tomato')
         fmtr = dates.DateFormatter("%H:%M:%S")
         ax.xaxis.set_major_formatter(fmtr)
