@@ -18,7 +18,7 @@ def determine_dimming_depth(light_curve_df,
     Assumes light curve is normalized such that pre-flare = 0%.
 
     Inputs:
-        light_curve_df [pd DataFrame]:    A pandas DataFrame with a DatetimeIndex and a column for intensity.
+        light_curve_df [pd DataFrame]:    A pandas DataFrame with a DatetimeIndex and a column for irradiance.
 
     Optional Inputs:
         earliest_allowed_time [metatime]: The function won't return a depth determined any earlier than this.
@@ -110,7 +110,7 @@ def determine_dimming_depth(light_curve_df,
         start_date = light_curve_df.index.values[0]
         start_date_string = pd.to_datetime(str(start_date))
         plt.xlabel(start_date_string.strftime('%Y-%m-%d %H:%M:%S'))
-        plt.ylabel('Intensity [%]')
+        plt.ylabel('Irradiance [%]')
         fmtr = dates.DateFormatter("%H:%M:%S")
         ax.xaxis.set_major_formatter(fmtr)
         ax.xaxis.set_major_locator(dates.HourLocator())

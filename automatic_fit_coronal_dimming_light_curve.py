@@ -19,7 +19,7 @@ def automatic_fit_coronal_dimming_light_curve(light_curve_df, minimum_score=0.3,
     """Automatically fit the best support vector machine regression (SVR) model for the input light curve.
 
     Inputs:
-        light_curve_df [pd DataFrame]: A pandas DataFrame with a DatetimeIndex, and columns for intensity and uncertainty.
+        light_curve_df [pd DataFrame]: A pandas DataFrame with a DatetimeIndex, and columns for irradiance and uncertainty.
 
     Optional Inputs:
         minimum_score [float]: Set this to the minimum explained variance score (0 - 1) acceptable for fits. If the
@@ -30,7 +30,7 @@ def automatic_fit_coronal_dimming_light_curve(light_curve_df, minimum_score=0.3,
         verbose [bool]:        Set to log the processing messages to disk and console. Default is False.
 
     Outputs:
-        light_curve_fit_df [pd DataFrame]: A pandas DataFrame with a DatetimeIndex, and columns for fitted intensity and uncertainty.
+        light_curve_fit_df [pd DataFrame]: A pandas DataFrame with a DatetimeIndex, and columns for fitted irradiance and uncertainty.
         best_fit_gamma [float]:            The best found gamma hyper parameter for the SVR.
         best_fit_score [float]:            The best explained variance score.
 
