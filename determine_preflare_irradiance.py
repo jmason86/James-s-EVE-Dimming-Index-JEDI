@@ -49,6 +49,13 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
         logger = JpmLogger(filename='determine_preflare_irradiance_log', path='/Users/jmason86/Desktop/')
         logger.info("Running on event with peak start time of {0}.".format(estimated_time_of_peak_start))
 
+    # Convert irradiance to percent if not already present
+    if 'irradiance_percent' not in light_curve_df.columns:
+        median_irradiance = light_curve_df['irradiance'].median()
+        light_curve_df['irradiance_percent'] = (light_curve_df['irradiance'].values - median_irradiance) / median_irradiance * 100.
+        if verbose:
+            logger.info("Converted irradiance to percent, baselining median in entire pre-flare window.")
+
     # Divide the pre-flare period into 3 equal-length windows
     windows = np.array_split(light_curve_df[:estimated_time_of_peak_start], 3)
     if verbose:
