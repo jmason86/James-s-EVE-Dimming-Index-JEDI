@@ -85,7 +85,7 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
 
     # Compute pre-flare irradiance (mean of the medians in absolute units)
     if failed_median_threshold or failed_std_threshold:
-        preflare_irradiance = None
+        preflare_irradiance = np.nan
     else:
         preflare_irradiance = np.mean([windowed_df['irradiance'].median() for windowed_df in windows])
         if verbose:
