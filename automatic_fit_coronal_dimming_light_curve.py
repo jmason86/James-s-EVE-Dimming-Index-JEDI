@@ -23,7 +23,7 @@ def automatic_fit_coronal_dimming_light_curve(light_curve_df, minimum_score=0.3,
 
     Optional Inputs:
         minimum_score [float]: Set this to the minimum explained variance score (0 - 1) acceptable for fits. If the
-                               best fit score is < minimum_score, this function will return None for light_curve_fit.
+                               best fit score is < minimum_score, this function will return np.nan for light_curve_fit.
                                Default value is 0.3.
         plots_save_path [str]: Set to a path in order to save the validation curve and best fit overplot on the data to disk.
                                Default is None, meaning no plots will be saved to disk.
@@ -110,11 +110,11 @@ def automatic_fit_coronal_dimming_light_curve(light_curve_df, minimum_score=0.3,
         logger.info('Best score: ' + str(best_fit_score))
         logger.info('Best fit gamma: ' + str(best_fit_gamma))
 
-    # Return None if only got bad fits
+    # Return np.nan if only got bad fits
     if best_fit_score < minimum_score:
         if verbose:
             logger.warning("Uh oh. Best fit score {0:.2f} is < user-defined minimum score {1:.2f}".format(best_fit_score, minimum_score))
-        return None, best_fit_gamma, best_fit_score
+        return np.nan, best_fit_gamma, best_fit_score
 
     # Otherwise train and fit the best model
     sample_weight = 1 / uncertainty
@@ -125,6 +125,7 @@ def automatic_fit_coronal_dimming_light_curve(light_curve_df, minimum_score=0.3,
         logger.info("Best model trained and fitted.")
 
     if plots_save_path:
+        plt.figure(0)
         plt.errorbar(X.ravel(), y, yerr=uncertainty, color='black', fmt='o', label='Input light curve')
         plt.plot(X.ravel(), y_fit, linewidth=6, label='Fit')
         plt.title("t$_0$ = " + datetimeindex_to_human(light_curve_df.index)[0])
