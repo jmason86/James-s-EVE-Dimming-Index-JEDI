@@ -1,4 +1,5 @@
 # Standard modules
+import os
 import matplotlib.pyplot as plt
 
 # Custom modules
@@ -47,6 +48,10 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
     if verbose:
         # TODO: Update the path
         logger = JpmLogger(filename='light_curve_peak_match_subtract_log', path='/Users/jmason86/Desktop/')
+
+    # Drop NaNs since peakutils can't handle them
+    light_curve_to_subtract_from_df = light_curve_to_subtract_from_df.dropna()
+    light_curve_to_subtract_with_df = light_curve_to_subtract_with_df.dropna()
 
     # Detrend and find the peaks that are ≥ 95% of the max irradiance within
     if verbose:
@@ -109,7 +114,12 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
         fmtr = dates.DateFormatter("%H:%M:%S")
         ax.xaxis.set_major_formatter(fmtr)
         ax.xaxis.set_major_locator(dates.HourLocator())
+
+        path = os.path.dirname(plot_path_filename)
+        if not os.path.exists(path):
+            os.makedirs(path)
         plt.savefig(plot_path_filename)
+
         if verbose:
             logger.info("Summary plot saved to %s" % plot_path_filename)
 
