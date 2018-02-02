@@ -39,8 +39,8 @@ def determine_dimming_depth(light_curve_df,
 
     Example:
         depth_percent = determine_dimming_depth(light_curve_df,
-                                                      plot_path_filename='./bla.png',
-                                                      verbose=True)
+                                                plot_path_filename='./bla.png',
+                                                verbose=True)
     """
 
     # Prepare the logger for verbose
@@ -52,12 +52,14 @@ def determine_dimming_depth(light_curve_df,
     # If no earliest_allowed_time set, then set it to beginning of light_curve_df
     if not earliest_allowed_time:
         earliest_allowed_time = light_curve_df.index[0]
-        logger.info("No earliest allowed time provided. Setting to beginning of light curve: {0}".format(earliest_allowed_time))
+        if verbose:
+            logger.info("No earliest allowed time provided. Setting to beginning of light curve: {0}".format(earliest_allowed_time))
 
     # If no latest_allowed_time set, then set it to end of light_curve_df
     if not latest_allowed_time:
         latest_allowed_time = light_curve_df.index[-1]
-        logger.info("No latest allowed time provided. Setting to end of light curve: {0}".format(latest_allowed_time))
+        if verbose:
+            logger.info("No latest allowed time provided. Setting to end of light curve: {0}".format(latest_allowed_time))
 
     # Optionally smooth the light curve with a rolling mean
     if smooth_points:
@@ -102,7 +104,7 @@ def determine_dimming_depth(light_curve_df,
                     c='black', s=300, zorder=3, label='minima')
         if depth:
             plt.scatter(depth_time, -depth,
-                        c='tomato', s=300, zorder=3, label='depth')
+                        c='goldenrod', s=300, zorder=3, label='depth')
             plt.title('Depth at ' + str(depth_time))
         else:
             plt.title('No Depth Found')
@@ -119,14 +121,14 @@ def determine_dimming_depth(light_curve_df,
         if depth:
             plt.annotate('', xy=(depth_time, -depth), xycoords='data',
                          xytext=(depth_time, 0), textcoords='data',
-                         arrowprops=dict(facecolor='tomato', edgecolor='tomato', linewidth=2))
+                         arrowprops=dict(facecolor='goldenrod', edgecolor='goldenrod', linewidth=2))
             mid_depth = -depth / 2.0
             plt.annotate('{0:.2f}'.format(depth), xy=(depth_time, mid_depth), xycoords='data',
-                         ha='right', va='center', rotation=90, size=18, color='tomato')
+                         ha='right', va='center', rotation=90, size=18, color='goldenrod')
 
         plt.savefig(plot_path_filename)
         if verbose:
             logger.info("Summary plot saved to %s" % plot_path_filename)
 
     # Return the depth
-    return depth
+    return depth, depth_time
