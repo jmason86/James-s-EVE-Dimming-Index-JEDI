@@ -97,6 +97,7 @@ def determine_dimming_depth(light_curve_df,
             logger.warning('None of the minima are below 0.')
 
     # Produce a summary plot
+    # This is to show pony
     if plot_path_filename:
         plt.style.use('jpm-transparent-light')
         from matplotlib import dates
