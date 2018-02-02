@@ -86,7 +86,7 @@ def automatic_fit_coronal_dimming_light_curve(light_curve_df, minimum_score=0.3,
         logger.info("Validation curve complete.")
 
     if plots_save_path:
-        plt.figure(0)
+        plt.clf()
         plt.style.use('jpm-transparent-light')
         plt.plot(gamma, np.median(train_score, 1), label='training score')
         plt.plot(gamma, np.median(val_score, 1), label='validation score')
@@ -126,7 +126,7 @@ def automatic_fit_coronal_dimming_light_curve(light_curve_df, minimum_score=0.3,
         logger.info("Best model trained and fitted.")
 
     if plots_save_path:
-        plt.figure(0)
+        plt.clf()
         plt.errorbar(X.ravel(), y, yerr=uncertainty, color='black', fmt='o', label='Input light curve')
         plt.plot(X.ravel(), y_fit, linewidth=6, label='Fit')
         plt.title("t$_0$ = " + datetimeindex_to_human(light_curve_df.index)[0])
