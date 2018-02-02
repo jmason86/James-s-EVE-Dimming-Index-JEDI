@@ -100,6 +100,7 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
         plt.style.use('jpm-transparent-light')
         from matplotlib import dates
 
+        plt.clf()
         fig, ax = plt.subplots()
         plt.plot(light_curve_to_subtract_from_df.index.values, light_curve_to_subtract_from_df.values, c='limegreen')
         plt.tick_params(axis='x', which='minor', labelbottom='off')
