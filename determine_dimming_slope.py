@@ -20,10 +20,10 @@ def determine_dimming_slope(light_curve_df,
         light_curve_df [pd DataFrame]:    A pandas DataFrame with a DatetimeIndex and a column for irradiance.
 
     Optional Inputs:
-        earliest_allowed_time [metatime]: The function won't return a depth determined any earlier than this.
+        earliest_allowed_time [metatime]: The function won't return a slope determined any earlier than this.
                                           It is recommended that this be the peak time of the flare.
                                           Default is None, meaning the beginning of the light_curve_df.
-        latest_allowed_time [metatime]:   The function won't return a depth determined any later than this.
+        latest_allowed_time [metatime]:   The function won't return a slope determined any later than this.
                                           It is recommended that this be the identified time of dimming depth.
                                           Default is None, meaning the end of the light_curve_df.
         smooth_points [integer]:          Used to apply a rolling mean with the number of points (indices) specified.
@@ -124,8 +124,6 @@ def determine_dimming_slope(light_curve_df,
         ax.xaxis.grid(b=True, which='minor')
         plt.ylabel('Irradiance [%]')
 
-        ax.legend(loc='best')
-
         inverse_str = '$^{-1}$'
         plt.annotate('slope_min={0} % sec{1}'.format(slope_min_str, inverse_str),
                      xy=(0.98, 0.12), xycoords='axes fraction', ha='right',
@@ -136,6 +134,8 @@ def determine_dimming_slope(light_curve_df,
         plt.annotate('slope_mean={0} % sec{1}'.format(slope_mean_str, inverse_str),
                      xy=(0.98, 0.04), xycoords='axes fraction', ha='right',
                      size=12, color=p[0].get_color())
+
+        ax.legend(loc='best')
 
         plt.savefig(plot_path_filename)
         if verbose:
