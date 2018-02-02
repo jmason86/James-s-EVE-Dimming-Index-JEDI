@@ -29,15 +29,17 @@ def determine_dimming_duration(light_curve_df,
         verbose [bool]:                   Set to log the processing messages to disk and console. Default is False.
 
     Outputs:
-        duration_seconds [integer]: The duration of dimming in seconds.
+        duration_seconds [integer]:         The duration of dimming in seconds.
+        duration_start_time [pd.Timestamp]: The time the duration starts (downward 0 crossing).
+        duration_end_time [pd.Timestamp]:   The time the duration ends (upward 0 crossing).
 
     Optional Outputs:
         None
 
     Example:
-        duration_seconds = determine_dimming_duration(light_curve_df,
-                                                      plot_path_filename='./bla.png',
-                                                      verbose=True)
+        duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(light_curve_df,
+                                                                                              plot_path_filename='./bla.png',
+                                                                                              verbose=True)
     """
 
     # If no earliest_allowed_time set, then set it to beginning of light_curve_df
@@ -93,7 +95,7 @@ def determine_dimming_duration(light_curve_df,
         from matplotlib import dates
 
         light_curve_df = light_curve_df.drop('diff', 1)
-        ax = light_curve_df.plot()
+        ax = light_curve_df['irradiance'].plot()
         plt.scatter([zero_crossing_times[first_neg_zero_crossing_index], zero_crossing_times[first_pos_zero_crossing_index]],
                     [light_curve_df['smooth'][zero_crossing_indices[first_neg_zero_crossing_index]],
                      light_curve_df['smooth'][zero_crossing_indices[first_pos_zero_crossing_index]]],
@@ -105,6 +107,7 @@ def determine_dimming_duration(light_curve_df,
         fmtr = dates.DateFormatter("%H:%M:%S")
         ax.xaxis.set_major_formatter(fmtr)
         ax.xaxis.set_major_locator(dates.HourLocator())
+        plt.title('Dimming Duration')
 
         plt.annotate('', xy=(first_neg_zero_crossing_time, 0), xycoords='data',
                      xytext=(first_pos_zero_crossing_time, 0), textcoords='data',
@@ -115,4 +118,4 @@ def determine_dimming_duration(light_curve_df,
         if verbose:
             logger.info("Summary plot saved to %s" % plot_path_filename)
 
-    return duration_seconds
+    return duration_seconds, first_neg_zero_crossing_time, first_pos_zero_crossing_time
