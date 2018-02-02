@@ -31,7 +31,8 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                           dimming_window_relative_to_flare_minutes_left=0.0,
                           dimming_window_relative_to_flare_minutes_right=240.0,
                           threshold_minimum_dimming_window_minutes=120.0,
-                          output_path='./', verbose=False):
+                          output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
+                          verbose=False):
     """Wrapper code for creating James's Extreme Ultraviolet Variability Experiment (EVE) Dimming Index (JEDI) catalog.
 
     Inputs:
@@ -52,7 +53,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
         threshold_minimum_dimming_window_minutes [float]:       The smallest allowed time window in which to search for dimming.
                                                                 Default is 120.
         output_path [str]:                                      Set to a path for saving the JEDI catalog table and processing
-                                                                summary plots. Default is './', the current directory.
+                                                                summary plots. Default is '/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
         verbose [bool]:                                         Set to log the processing messages to disk and console. Default is False.
 
     Outputs:
@@ -214,6 +215,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                 preflare_irradiance.append(determine_preflare_irradiance(eve_line_preflare_time,
                                                                          pd.Timestamp(goes_flare_events['start_time'][flare_index].iso),
                                                                          verbose=verbose))
+                plt.close('all')
         else:
             logger.info("This flare at {0} will use the pre-flare irradiance from flare at {1}."
                         .format(goes_flare_events['peak_time'][flare_index].iso,
@@ -253,7 +255,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                             .format(((bracket_time_right - bracket_time_left).sec / 60.0), threshold_minimum_dimming_window_minutes, goes_flare_events['peak_time'][flare_index]))
 
             # Skip the rest of the processing in the flare_index loop
-            # continue  # TODO: uncomment outside prototype
+            continue
         else:
             eve_lines_event = eve_lines[bracket_time_left.iso:bracket_time_right.iso]
 
@@ -287,6 +289,8 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                 jedi_row[ion_permutations[i] + ' Correction Time Shift [s]'] = seconds_shift
                 jedi_row[ion_permutations[i] + ' Correction Scale Factor'] = scale_factor
 
+                plt.close('all')
+
                 if verbose:
                     logger.info('Event {0} flare removal correction complate'.format(flare_index))
 
@@ -309,7 +313,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                 if not os.path.exists(fitting_path):
                     os.makedirs(fitting_path)
 
-                plt.clf()
+                plt.close('all')
                 light_curve_fit, best_fit_gamma, best_fit_score = automatic_fit_coronal_dimming_light_curve(eve_line_event,
                                                                                                             plots_save_path='{0} Event {1} {2} '.format(fitting_path, flare_index, column),
                                                                                                             verbose=False)
@@ -335,7 +339,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                 if not os.path.exists(depth_path):
                     os.makedirs(depth_path)
 
-                plt.clf()
+                plt.close('all')
                 depth_percent, depth_time = determine_dimming_depth(eve_line_event,
                                                                     plot_path_filename='{0} Event {1} {2} Depth.png'.format(depth_path, flare_index, column),
                                                                     verbose=verbose)
@@ -352,7 +356,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                 slope_start_time = pd.Timestamp((goes_flare_events['peak_time'][flare_index]).iso)
                 slope_end_time = depth_time
 
-                plt.clf()
+                plt.close('all')
                 slope_min, slope_max, slope_mean = determine_dimming_slope(eve_line_event,
                                                                            earliest_allowed_time=slope_start_time,
                                                                            latest_allowed_time=slope_end_time,
@@ -371,7 +375,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                 if not os.path.exists(duration_path):
                     os.makedirs(duration_path)
 
-                plt.clf()
+                plt.close('all')
                 duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(eve_line_event,
                                                                                                       earliest_allowed_time=slope_start_time,
                                                                                                       plot_path_filename='{0} Event {1} {2} Duration.png'.format(duration_path, flare_index, column),
