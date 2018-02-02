@@ -32,15 +32,16 @@ def determine_dimming_depth(light_curve_df,
         verbose [bool]:                   Set to log the processing messages to disk and console. Default is False.
 
     Outputs:
-        depth_percent [float]: The depth of dimming in percent terms.
+        depth_percent [float]:     The depth of dimming in percent terms. np.nan if failed to determine.
+        depth_time [pd.Timestamp]: The time of the depth. np.nan if failed to determine.
 
     Optional Outputs:
         None
 
     Example:
-        depth_percent = determine_dimming_depth(light_curve_df,
-                                                plot_path_filename='./bla.png',
-                                                verbose=True)
+        depth_percent, depth_time = determine_dimming_depth(light_curve_df,
+                                                            plot_path_filename='./bla.png',
+                                                            verbose=True)
     """
 
     # Prepare the logger for verbose
@@ -90,7 +91,8 @@ def determine_dimming_depth(light_curve_df,
         if verbose:
             logger.info('Depth determiend to be {0:.2f} at {1}'.format(depth, depth_time))
     else:
-        depth = None
+        depth = np.nan
+        depth_time = np.nan
         if verbose and minima_indices.size > 0:
             logger.warning('None of the minima are below 0.')
 
