@@ -31,6 +31,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                           dimming_window_relative_to_flare_minutes_left=0.0,
                           dimming_window_relative_to_flare_minutes_right=240.0,
                           threshold_minimum_dimming_window_minutes=120.0,
+                          flare_index_range=range(0, 5052),
                           output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
                           verbose=False):
     """Wrapper code for creating James's Extreme Ultraviolet Variability Experiment (EVE) Dimming Index (JEDI) catalog.
@@ -52,6 +53,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                                                                 window instead. Default is 240 (4 hours).
         threshold_minimum_dimming_window_minutes [float]:       The smallest allowed time window in which to search for dimming.
                                                                 Default is 120.
+        flare_index_range [range]                               The range of GOES flare indices to process. Default is range(0, 5052).
         output_path [str]:                                      Set to a path for saving the JEDI catalog table and processing
                                                                 summary plots. Default is '/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
         verbose [bool]:                                         Set to log the processing messages to disk and console. Default is False.
@@ -72,6 +74,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
     if verbose:
         logger = JpmLogger(filename='generate_jedi_catalog', path=output_path, console=False)
         logger.info("Starting JEDI processing pipeline.")
+        logger.info("Processing events {0} - {1}".format(flare_index_range[0], flare_index_range[-1]))
     else:
         logger = None
 
@@ -111,7 +114,8 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
     wavelengths_str = []
     [wavelengths_str.append('{0:1.1f}'.format(wavelength)) for wavelength in wavelengths]
     eve_lines = pd.DataFrame(irradiance, columns=wavelengths_str)
-    eve_lines.index = yyyydoy_sod_to_datetime(eve_readsav.yyyydoy, eve_readsav.sod)  # Convert EVE standard time to datetime
+    eve_lines.index = pd.to_datetime(eve_readsav.iso.astype(str))
+    eve_lines = eve_lines.drop_duplicates()
 
     # Get GOES flare events above C1 within date range corresponding to EVE data
     # flares = get_goes_flare_events(eve_lines.index[0], eve_lines.index[-1], verbose=verbose)  # TODO: The method in sunpy needs fixing, issue 2434
@@ -123,7 +127,6 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
     goes_flare_events['event_start_time_human'] = goes_flare_events['event_start_time_human'].astype(str)
     goes_flare_events['peak_time'] = Time(goes_flare_events['event_peak_time_jd'], format='jd', scale='utc')
     goes_flare_events['start_time'] = Time(goes_flare_events['event_start_time_jd'], format='jd', scale='utc')
-    num_flares = len(goes_flare_events['class'])
     if verbose:
         logger.info('Loaded GOES flare events.')
 
@@ -178,14 +181,14 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
 
     # Start a progress bar
     widgets = [progressbar.Percentage(), progressbar.Bar(), progressbar.Timer(), ' ', progressbar.AdaptiveETA()]
-    progress_bar = progressbar.ProgressBar(widgets=widgets, max_value=num_flares).start()
+    progress_bar = progressbar.ProgressBar(widgets=widgets, min_value=flare_index_range[0], max_value=flare_index_range[-1]).start()
 
     # Prepare a hold-over pre-flare irradiance value,
     # which will normally have one element for each of the 39 emission lines
     preflare_irradiance = None
 
     # Start loop through all flares
-    for flare_index in range(num_flares):
+    for flare_index in flare_index_range:
 
         # Skip event 0 to avoid problems with referring to earlier indices
         if flare_index == 0:
@@ -267,10 +270,12 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
         # Convert irradiance units to percent
         # (in place, don't care about absolute units from this point forward)
         eve_lines_event = (eve_lines_event - preflare_irradiance) / preflare_irradiance * 100.0
+
         if verbose:
             logger.info("Event {0} irradiance converted from absolute to percent units.".format(flare_index))
 
         # Do flare removal in the light curves and add the results to the DataFrame
+        progress_bar_correction = progressbar.ProgressBar(widgets=widgets, max_value=len(ion_tuples)).start()
         for i in range(len(ion_tuples)):
             light_curve_to_subtract_from_df = pd.DataFrame(eve_lines_event[ion_tuples[i][0]])
             light_curve_to_subtract_from_df.columns = ['irradiance']
@@ -294,7 +299,8 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                 plt.close('all')
 
                 if verbose:
-                    logger.info('Event {0} flare removal correction complate'.format(flare_index))
+                    logger.info('Event {0} flare removal correction complete'.format(flare_index))
+                progress_bar_correction.update(i)
 
         # TODO: Update calculate_eve_fe_line_precision to compute for all emission lines, not just selected
         uncertainty = np.ones(len(eve_lines_event)) * 0.002545
@@ -302,7 +308,8 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
         # TODO: Propagate uncertainty through light_curve_peak_match_subtract and store in eve_lines_event
 
         # Fit the light curves to reduce influence of noise on the parameterizations to come later
-        for column in eve_lines_event:
+        progress_bar_fitting = progressbar.ProgressBar(widgets=widgets, max_value=len(eve_lines_event.columns)).start()
+        for i, column in enumerate(eve_lines_event):
             if (eve_lines_event[column].isnull().all().all()):
                 if verbose:
                     logger.info('Event {0} {1} fitting skipped because all irradiances are NaN.'.format(flare_index, column))
@@ -326,6 +333,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
 
                 if verbose:
                     logger.info('Event {0} {1} light curves fitted.'.format(flare_index, column))
+                progress_bar_fitting.update(i)
 
         # Parameterize the light curves for dimming
         for column in eve_lines_event:
