@@ -12,7 +12,7 @@ __contact__ = 'jmason86@gmail.com'
 
 def determine_dimming_duration(light_curve_df,
                                earliest_allowed_time=None, smooth_points=0,
-                               plot_path_filename=None, verbose=False):
+                               plot_path_filename=None, verbose=False, logger=None):
     """Find the duration of dimming in a light curve, if any.
     Assumes light curve is normalized such that pre-flare = 0%.
 
@@ -27,6 +27,8 @@ def determine_dimming_duration(light_curve_df,
         plot_path_filename [str]:         Set to a path and filename in order to save the summary plot to disk.
                                           Default is None, meaning the plot will not be saved to disk.
         verbose [bool]:                   Set to log the processing messages to disk and console. Default is False.
+        logger [JpmLogger]:               A configured logger from jpm_logger.py. If set to None, will generate a
+                                          new one. Default is None.
 
     Outputs:
         duration_seconds [integer]:         The duration of dimming in seconds.
@@ -48,8 +50,9 @@ def determine_dimming_duration(light_curve_df,
 
     # Prepare the logger for verbose
     if verbose:
-        # TODO: Update the path
-        logger = JpmLogger(filename='determine_dimming_duration_log', path='/Users/jmason86/Desktop/')
+        if not logger:
+            logger = JpmLogger(filename='determine_dimming_duration_log', path='/Users/jmason86/Desktop/')
+        logger.info("Running on event with light curve start time of {0}.".format(light_curve_df.index[0]))
 
     # Optionally smooth the light curve with a rolling mean
     if smooth_points:

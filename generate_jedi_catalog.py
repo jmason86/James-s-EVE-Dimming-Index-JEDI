@@ -70,8 +70,10 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
 
     # Prepare the logger for verbose
     if verbose:
-        logger = JpmLogger(filename='generate_jedi_catalog', path=output_path)
+        logger = JpmLogger(filename='generate_jedi_catalog', path=output_path, console=False)
         logger.info("Starting JEDI processing pipeline.")
+    else:
+        logger = None
 
     # Get EVE level 2 extracted emission lines data
     # TODO: Replace this shortcut method with the method I'm building into sunpy
@@ -214,7 +216,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                 eve_line_preflare_time.columns = ['irradiance']
                 preflare_irradiance.append(determine_preflare_irradiance(eve_line_preflare_time,
                                                                          pd.Timestamp(goes_flare_events['start_time'][flare_index].iso),
-                                                                         verbose=verbose))
+                                                                         verbose=verbose, logger=logger))
                 plt.close('all')
         else:
             logger.info("This flare at {0} will use the pre-flare irradiance from flare at {1}."
@@ -283,7 +285,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                                                                                                      light_curve_to_subtract_with_df,
                                                                                                      pd.Timestamp((goes_flare_events['peak_time'][flare_index]).iso),
                                                                                                      plot_path_filename=output_path + 'Peak Subtractions/Event {0} {1}.png'.format(flare_index, ion_permutations[i]),
-                                                                                                     verbose=verbose)
+                                                                                                     verbose=verbose, logger=logger)
 
                 eve_lines_event[ion_permutations[i]] = light_curve_corrected
                 jedi_row[ion_permutations[i] + ' Correction Time Shift [s]'] = seconds_shift
@@ -316,14 +318,14 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                 plt.close('all')
                 light_curve_fit, best_fit_gamma, best_fit_score = automatic_fit_coronal_dimming_light_curve(eve_line_event,
                                                                                                             plots_save_path='{0} Event {1} {2} '.format(fitting_path, flare_index, column),
-                                                                                                            verbose=False)
+                                                                                                            verbose=verbose, logger=logger)
 
                 eve_lines_event[column] = light_curve_fit
                 jedi_row[column + ' Fitting Gamma'] = best_fit_gamma
                 jedi_row[column + ' Fitting Score'] = best_fit_score
 
                 if verbose:
-                    logger.info('Event {0} light curves fitted.'.format(flare_index))
+                    logger.info('Event {0} {1} light curves fitted.'.format(flare_index, column))
 
         # Parameterize the light curves for dimming
         for column in eve_lines_event:
@@ -342,7 +344,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                 plt.close('all')
                 depth_percent, depth_time = determine_dimming_depth(eve_line_event,
                                                                     plot_path_filename='{0} Event {1} {2} Depth.png'.format(depth_path, flare_index, column),
-                                                                    verbose=verbose)
+                                                                    verbose=verbose, logger=logger)
 
                 jedi_row[column + ' Depth [%]'] = depth_percent
                 # jedi_row[column + ' Depth Uncertainty [%]'] = depth_uncertainty  # TODO: make determine_dimming_depth return the propagated uncertainty
@@ -361,7 +363,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                                                                            earliest_allowed_time=slope_start_time,
                                                                            latest_allowed_time=slope_end_time,
                                                                            plot_path_filename='{0} Event {1} {2} Slope.png'.format(slope_path, flare_index, column),
-                                                                           verbose=verbose)
+                                                                           verbose=verbose, logger=logger)
 
                 jedi_row[column + ' Slope Min [%/s]'] = slope_min
                 jedi_row[column + ' Slope Max [%/s]'] = slope_max
@@ -379,7 +381,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                 duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(eve_line_event,
                                                                                                       earliest_allowed_time=slope_start_time,
                                                                                                       plot_path_filename='{0} Event {1} {2} Duration.png'.format(duration_path, flare_index, column),
-                                                                                                      verbose=verbose)
+                                                                                                      verbose=verbose, logger=logger)
 
                 jedi_row[column + ' Duration [s]'] = duration_seconds
                 jedi_row[column + ' Duration Start Time'] = duration_start_time

@@ -12,7 +12,7 @@ __contact__ = 'jmason86@gmail.com'
 
 
 def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve_to_subtract_with_df, estimated_time_of_peak,
-                                    plot_path_filename=None, verbose=False):
+                                    plot_path_filename=None, verbose=False, logger=None):
     """Align the peak of a second light curve to the first, scale its magnitude to match, and subtract it off.
 
     Inputs:
@@ -24,6 +24,8 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
         plot_path_filename [str]: Set to a path and filename in order to save the summary plot to disk.
                                   Default is None, meaning the plot will not be saved to disk.
         verbose [bool]:           Set to log the processing messages to disk and console. Default is False.
+        logger [JpmLogger]:       A configured logger from jpm_logger.py. If set to None, will generate a
+                                  new one. Default is None.
 
     Outputs:
         light_curve_corrected_df [pd DataFrame]: A pandas DataFrame with the same format as light_curve_to_subtract_from_df but
@@ -46,8 +48,9 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
 
     # Prepare the logger for verbose
     if verbose:
-        # TODO: Update the path
-        logger = JpmLogger(filename='light_curve_peak_match_subtract_log', path='/Users/jmason86/Desktop/')
+        if not logger:
+            logger = JpmLogger(filename='light_curve_peak_match_subtract_log', path='/Users/jmason86/Desktop/')
+        logger.info("Running on event with light curve start time of {0}.".format(light_curve_to_subtract_from_df.index[0]))
 
     # Drop NaNs since peakutils can't handle them
     light_curve_to_subtract_from_df = light_curve_to_subtract_from_df.dropna()

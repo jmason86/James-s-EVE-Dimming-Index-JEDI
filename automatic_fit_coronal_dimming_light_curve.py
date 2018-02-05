@@ -15,7 +15,8 @@ __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
 
 
-def automatic_fit_coronal_dimming_light_curve(light_curve_df, minimum_score=0.3, plots_save_path=None, verbose=False):
+def automatic_fit_coronal_dimming_light_curve(light_curve_df, minimum_score=0.3, plots_save_path=None,
+                                              verbose=False, logger=None):
     """Automatically fit the best support vector machine regression (SVR) model for the input light curve.
 
     Inputs:
@@ -28,6 +29,8 @@ def automatic_fit_coronal_dimming_light_curve(light_curve_df, minimum_score=0.3,
         plots_save_path [str]: Set to a path in order to save the validation curve and best fit overplot on the data to disk.
                                Default is None, meaning no plots will be saved to disk.
         verbose [bool]:        Set to log the processing messages to disk and console. Default is False.
+        logger [JpmLogger]:    A configured logger from jpm_logger.py. If set to None, will generate a
+                               new one. Default is None.
 
     Outputs:
         light_curve_fit_df [pd DataFrame]: A pandas DataFrame with a DatetimeIndex, and columns for fitted irradiance and uncertainty.
@@ -43,8 +46,9 @@ def automatic_fit_coronal_dimming_light_curve(light_curve_df, minimum_score=0.3,
 
     # Prepare the logger for verbose
     if verbose:
-        # TODO: Update the path
-        logger = JpmLogger(filename='automatic_fit_coronal_dimming_light_curve_log', path='/Users/jmason86/Desktop/')
+        if not logger:
+            logger = JpmLogger(filename='automatic_fit_coronal_dimming_light_curve_log', path='/Users/jmason86/Desktop/')
+        logger.info("Running on event with light curve start time of {0}.".format(light_curve_df.index[0]))
 
     # Pull data out of the DataFrame for compatibility formatting
     X = metatimes_to_seconds_since_start(light_curve_df.index)

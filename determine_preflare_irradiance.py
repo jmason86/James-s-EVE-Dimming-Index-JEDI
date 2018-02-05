@@ -13,7 +13,7 @@ __contact__ = 'jmason86@gmail.com'
 
 def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
                                   max_median_diff_threshold=10.0, std_threshold=0.5,
-                                  plot_path_filename=None, verbose=False):
+                                  plot_path_filename=None, verbose=False, logger=None):
     """Determine pre-flare irradiance level in a solar light curve.
     Or, more generally, find the pre-peak level in a time series.
 
@@ -30,6 +30,8 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
         plot_path_filename [str]:          Set to a path and filename in order to save the summary plot to disk.
                                            Default is None, meaning the plot will not be saved to disk.
         verbose [bool]:                    Set to log the processing messages to disk and console. Default is False.
+        logger [JpmLogger]:                A configured logger from jpm_logger.py. If set to None, will generate a
+                                           new one. Default is None.
 
     Outputs:
         preflare_irradiance [float]: The identified pre-flare irradiance level in the same units as light_curve_df.irradiance.
@@ -45,8 +47,8 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
 
     # Prepare the logger for verbose
     if verbose:
-        # TODO: Update the path
-        logger = JpmLogger(filename='determine_preflare_irradiance_log', path='/Users/jmason86/Desktop/')
+        if not logger:
+            logger = JpmLogger(filename='determine_preflare_irradiance_log', path='/Users/jmason86/Desktop/')
         logger.info("Running on event with peak start time of {0}.".format(estimated_time_of_peak_start))
 
     # Convert irradiance to percent if not already present
