@@ -1,5 +1,6 @@
 # Standard modules
 import os
+import numpy as np
 import matplotlib.pyplot as plt
 
 # Custom modules
@@ -29,11 +30,14 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
 
     Outputs:
         light_curve_corrected_df [pd DataFrame]: A pandas DataFrame with the same format as light_curve_to_subtract_from_df but
-                                                 with the resultant peak match and subtraction performed.
+                                                 with the resultant peak match and subtraction performed. Returns np.nan if
+                                                 the peaks couldn't be found.
         seconds_shift [float]:                   The number of seconds that light_curve_to_subtract_with_df was shifted to get
-                                                 its peak to match light_curve_to_subtract_from_df.
+                                                 its peak to match light_curve_to_subtract_from_df. Returns np.nan if
+                                                 the peaks couldn't be found.
         scale_factor [float]:                    The multiplicative factor applied to light_curve_to_subtract_with_df to get
-                                                 its peak to match light_curve_to_subtract_from_df.
+                                                 its peak to match light_curve_to_subtract_from_df. Returns np.nan if
+                                                 the peaks couldn't be found.
 
     Optional Outputs:
         None
@@ -59,18 +63,34 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
     # Detrend and find the peaks that are ≥ 95% of the max irradiance within
     if verbose:
         logger.info("Detrending light curves.")
+    if (light_curve_to_subtract_from_df['irradiance'].values < 0).all():
+        light_curve_to_subtract_from_df.iloc[0] = 1  # Else can crash peakutils.baseline
     base_from = peakutils.baseline(light_curve_to_subtract_from_df)
     detrend_from = light_curve_to_subtract_from_df - base_from
     indices_from = peakutils.indexes(detrend_from.values.squeeze(), thres=0.95)
 
+    if (light_curve_to_subtract_with_df['irradiance'].values < 0).all():
+        light_curve_to_subtract_with_df.iloc[0] = 1  # Else can crash peakutils.baseline
     base_with = peakutils.baseline(light_curve_to_subtract_with_df)
     detrend_with = light_curve_to_subtract_with_df - base_with
     indices_with = peakutils.indexes(detrend_with.values.squeeze(), thres=0.95)
+
+    if len(indices_from) == 0:
+        if verbose:
+            logger.warning('Could not find peak in light curve to subtract from.')
+        return np.nan, np.nan, np.nan
+    if len(indices_with) == 0:
+        if verbose:
+            logger.warning('Could not find peak in light curve to subtract with.')
+        return np.nan, np.nan, np.nan
 
     # Identify the peak closest to the input estimated peak time (e.g., from GOES/XRS)
     if verbose:
         logger.info("Identifying peaks closest to initial guess in light curves.")
     peak_index_from = indices_from[closest(light_curve_to_subtract_from_df.index[indices_from], estimated_time_of_peak)]
+    if len(indices_with) == 0:
+        import pdb
+        pdb.set_trace()
     peak_index_with = indices_with[closest(light_curve_to_subtract_with_df.index[indices_with], estimated_time_of_peak)]
     index_shift = peak_index_from - peak_index_with
 
@@ -87,7 +107,6 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
     scale_factor = (detrend_from.values[peak_index_from] / shifted_with.values[peak_index_with + index_shift])[0]
     shifted_scaled_with = shifted_with * scale_factor
     light_curve_corrected_df = light_curve_to_subtract_from_df - shifted_scaled_with
-    light_curve_corrected_df.head()
 
     if verbose:
         if light_curve_corrected_df.isnull().values.sum() > 1:
