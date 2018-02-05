@@ -80,10 +80,15 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
         if verbose:
             logger.warning('Cannot compute pre-flare irradiance. Maximum difference in window medians ({0}) exceeded threshold ({1}).'.format(max_median_diff, max_median_diff_threshold))
         failed_median_threshold = True
-    if (stds < std_threshold).sum() < 2:
+    if np.all(np.isnan(stds)):
         if verbose:
-            logger.warning('Cannot compute pre-flare irradiance. Standard deviation in more than 1 window is larger than threshold ({0}).'.format(std_threshold))
+            logger.warning('Cannot compute pre-flare irradiance. All standard deviations are nan.')
         failed_std_threshold = True
+    else:
+        if (stds < std_threshold).sum() < 2:
+            if verbose:
+                logger.warning('Cannot compute pre-flare irradiance. Standard deviation in more than 1 window is larger than threshold ({0}).'.format(std_threshold))
+            failed_std_threshold = True
 
     # Compute pre-flare irradiance (mean of the medians in absolute units)
     if failed_median_threshold or failed_std_threshold:
