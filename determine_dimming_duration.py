@@ -54,6 +54,9 @@ def determine_dimming_duration(light_curve_df,
             logger = JpmLogger(filename='determine_dimming_duration_log', path='/Users/jmason86/Desktop/')
         logger.info("Running on event with light curve start time of {0}.".format(light_curve_df.index[0]))
 
+    # Set up a successful processing flag
+    found_duration = True
+
     # Optionally smooth the light curve with a rolling mean
     if smooth_points:
         light_curve_df['smooth'] = light_curve_df.rolling(smooth_points, center=True).mean()
@@ -68,30 +71,48 @@ def determine_dimming_duration(light_curve_df,
     zero_crossing_indices = np.where(np.diff(np.signbit(light_curve_df['smooth'])))[0]
     zero_crossing_times = light_curve_df.index[zero_crossing_indices]
 
-    # Discard any indices prior to the user-provided earliest_allowed_time, else return null
+    # Discard any indices prior to the user-provided earliest_allowed_time, else cannot compute
     zero_crossing_indices = zero_crossing_indices[zero_crossing_times > earliest_allowed_time]
     if zero_crossing_indices.size == 0:
-        logger.warning('No zero crossings detected before earliest allowed time of %s' % earliest_allowed_time)
-        return None
+        if verbose:
+            logger.warning('No zero crossings detected after earliest allowed time of %s' % earliest_allowed_time)
+        found_duration = False
 
     # Figure out which way the light curve is sloping
-    light_curve_df['diff'] = light_curve_df['smooth'].diff()
+    if found_duration:
+        light_curve_df['diff'] = light_curve_df['smooth'].diff()
 
     # Find the first negative slope zero crossing time
-    first_neg_zero_crossing_index = np.where(light_curve_df['diff'][zero_crossing_indices + 1] < 0)[0][0]
-    first_neg_zero_crossing_time = light_curve_df.index[zero_crossing_indices[first_neg_zero_crossing_index]]
+    if found_duration:
+        neg_zero_crossing_indices = np.where(light_curve_df['diff'][zero_crossing_indices + 1] < 0)[0]
+        if len(neg_zero_crossing_indices) > 0:
+            first_neg_zero_crossing_index = neg_zero_crossing_indices[0]
+            first_neg_zero_crossing_time = light_curve_df.index[zero_crossing_indices[first_neg_zero_crossing_index]]
+        else:
+            if verbose:
+                logger.warning('No negative slope 0-crossing found. Duration cannot be defined.')
+            found_duration = False
 
     # Find the first postiive slope zero crossing
-    first_pos_zero_crossing_index = np.where(light_curve_df['diff'][zero_crossing_indices + 1] > 0)[0][0]
-    first_pos_zero_crossing_time = light_curve_df.index[zero_crossing_indices[first_pos_zero_crossing_index]]
+    if found_duration:
+        pos_zero_crossing_indices = np.where(light_curve_df['diff'][zero_crossing_indices + 1] > 0)[0]
+        if len(pos_zero_crossing_indices) > 0:
+            first_pos_zero_crossing_index = pos_zero_crossing_indices[0]
+            first_pos_zero_crossing_time = light_curve_df.index[zero_crossing_indices[first_pos_zero_crossing_index]]
+        else:
+            if verbose:
+                logger.warning('No positive slope 0-crossing found. Duration cannot be defined.')
+            found_duration = False
 
     # If the first negative slope zero crossing isn't earlier than the positive one, return null
-    if first_neg_zero_crossing_time > first_pos_zero_crossing_time:
-        logger.warning('Dimming light curve may be misaligned in window. Negative slope 0-crossing detected after positive one.')
-        return None
+    if (found_duration) and (first_neg_zero_crossing_time > first_pos_zero_crossing_time):
+        if verbose:
+            logger.warning('Dimming light curve may be misaligned in window. Negative slope 0-crossing detected after positive one.')
+        found_duration = False
 
     # Return the time difference in seconds between the selected zero crossings
-    duration_seconds = int((first_pos_zero_crossing_time - first_neg_zero_crossing_time).total_seconds())
+    if found_duration:
+        duration_seconds = int((first_pos_zero_crossing_time - first_neg_zero_crossing_time).total_seconds())
 
     if plot_path_filename:
         plt.style.use('jpm-transparent-light')
@@ -99,10 +120,6 @@ def determine_dimming_duration(light_curve_df,
 
         light_curve_df = light_curve_df.drop('diff', 1)
         ax = light_curve_df['irradiance'].plot()
-        plt.scatter([zero_crossing_times[first_neg_zero_crossing_index], zero_crossing_times[first_pos_zero_crossing_index]],
-                    [light_curve_df['smooth'][zero_crossing_indices[first_neg_zero_crossing_index]],
-                     light_curve_df['smooth'][zero_crossing_indices[first_pos_zero_crossing_index]]],
-                    c='black', s=300, zorder=3)
         start_date = light_curve_df.index.values[0]
         start_date_string = pd.to_datetime(str(start_date))
         plt.xlabel(start_date_string.strftime('%Y-%m-%d %H:%M:%S'))
@@ -112,13 +129,24 @@ def determine_dimming_duration(light_curve_df,
         ax.xaxis.set_major_locator(dates.HourLocator())
         plt.title('Dimming Duration')
 
-        plt.annotate('', xy=(first_neg_zero_crossing_time, 0), xycoords='data',
-                     xytext=(first_pos_zero_crossing_time, 0), textcoords='data',
-                     arrowprops=dict(facecolor='black', linewidth=5, arrowstyle='<->'))
-        mid_time = first_neg_zero_crossing_time + (first_pos_zero_crossing_time - first_neg_zero_crossing_time) / 2
-        plt.annotate(str(duration_seconds) + ' s', xy=(mid_time, 0), xycoords='data', ha='center', va='bottom', size=18)
+        if found_duration:
+            plt.scatter([zero_crossing_times[first_neg_zero_crossing_index], zero_crossing_times[first_pos_zero_crossing_index]],
+                        [light_curve_df['smooth'][zero_crossing_indices[first_neg_zero_crossing_index]],
+                         light_curve_df['smooth'][zero_crossing_indices[first_pos_zero_crossing_index]]],
+                        c='black', s=300, zorder=3)
+            plt.annotate('', xy=(first_neg_zero_crossing_time, 0), xycoords='data',
+                         xytext=(first_pos_zero_crossing_time, 0), textcoords='data',
+                         arrowprops=dict(facecolor='black', linewidth=5, arrowstyle='<->'))
+            mid_time = first_neg_zero_crossing_time + (first_pos_zero_crossing_time - first_neg_zero_crossing_time) / 2
+            plt.annotate(str(duration_seconds) + ' s', xy=(mid_time, 0), xycoords='data', ha='center', va='bottom', size=18)
+
         plt.savefig(plot_path_filename)
         if verbose:
             logger.info("Summary plot saved to %s" % plot_path_filename)
+
+    if not found_duration:
+        duration_seconds = np.nan
+        first_neg_zero_crossing_time = np.nan
+        first_pos_zero_crossing_time = np.nan
 
     return duration_seconds, first_neg_zero_crossing_time, first_pos_zero_crossing_time
