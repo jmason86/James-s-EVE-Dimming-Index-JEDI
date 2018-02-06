@@ -12,7 +12,6 @@ import progressbar
 
 
 # Custom modules
-from jpm_time_conversions import yyyydoy_sod_to_datetime
 from jpm_logger import JpmLogger
 from jpm_number_printing import latex_float
 # from get_goes_flare_events import get_goes_flare_events  # TODO: Uncomment once sunpy method implemented
@@ -181,7 +180,8 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
 
     # Start a progress bar
     widgets = [progressbar.Percentage(), progressbar.Bar(), progressbar.Timer(), ' ', progressbar.AdaptiveETA()]
-    progress_bar = progressbar.ProgressBar(widgets=widgets, min_value=flare_index_range[0], max_value=flare_index_range[-1]).start()
+    progress_bar = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Flare Event Loop: ')] + widgets,
+                                           min_value=flare_index_range[0], max_value=flare_index_range[-1]).start()
 
     # Prepare a hold-over pre-flare irradiance value,
     # which will normally have one element for each of the 39 emission lines
@@ -275,7 +275,8 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
             logger.info("Event {0} irradiance converted from absolute to percent units.".format(flare_index))
 
         # Do flare removal in the light curves and add the results to the DataFrame
-        progress_bar_correction = progressbar.ProgressBar(widgets=widgets, max_value=len(ion_tuples)).start()
+        progress_bar_correction = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Peak Match Subtract: ')] + widgets,
+                                                          max_value=len(ion_tuples)).start()
         for i in range(len(ion_tuples)):
             light_curve_to_subtract_from_df = pd.DataFrame(eve_lines_event[ion_tuples[i][0]])
             light_curve_to_subtract_from_df.columns = ['irradiance']
@@ -302,13 +303,16 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                     logger.info('Event {0} flare removal correction complete'.format(flare_index))
                 progress_bar_correction.update(i)
 
+        progress_bar_correction.finish()
+
         # TODO: Update calculate_eve_fe_line_precision to compute for all emission lines, not just selected
         uncertainty = np.ones(len(eve_lines_event)) * 0.002545
 
         # TODO: Propagate uncertainty through light_curve_peak_match_subtract and store in eve_lines_event
 
         # Fit the light curves to reduce influence of noise on the parameterizations to come later
-        progress_bar_fitting = progressbar.ProgressBar(widgets=widgets, max_value=len(eve_lines_event.columns)).start()
+        progress_bar_fitting = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Light curve fitting: ')] + widgets,
+                                                       max_value=len(eve_lines_event.columns)).start()
         for i, column in enumerate(eve_lines_event):
             if (eve_lines_event[column].isnull().all().all()):
                 if verbose:
@@ -334,6 +338,8 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                 if verbose:
                     logger.info('Event {0} {1} light curves fitted.'.format(flare_index, column))
                 progress_bar_fitting.update(i)
+
+        progress_bar_fitting.finish()
 
         # Parameterize the light curves for dimming
         for column in eve_lines_event:
@@ -456,3 +462,5 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
 
         # Update progress bar
         progress_bar.update(flare_index)
+
+    progress_bar.finish()
