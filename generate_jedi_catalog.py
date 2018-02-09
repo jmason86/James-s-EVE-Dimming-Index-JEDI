@@ -372,37 +372,41 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                 slope_start_time = pd.Timestamp((goes_flare_events['peak_time'][flare_index]).iso)
                 slope_end_time = depth_time
 
-                plt.close('all')
-                slope_min, slope_max, slope_mean = determine_dimming_slope(eve_line_event,
-                                                                           earliest_allowed_time=slope_start_time,
-                                                                           latest_allowed_time=slope_end_time,
-                                                                           plot_path_filename='{0} Event {1} {2} Slope.png'.format(slope_path, flare_index, column),
-                                                                           verbose=verbose, logger=logger)
+                if (np.isnan(slope_start_time)) or (np.isnan(slope_end_time)):
+                    if verbose:
+                        logger.warning('Cannot compute slope or duration because slope bounding times NaN.')
+                else:
+                    plt.close('all')
+                    slope_min, slope_max, slope_mean = determine_dimming_slope(eve_line_event,
+                                                                               earliest_allowed_time=slope_start_time,
+                                                                               latest_allowed_time=slope_end_time,
+                                                                               plot_path_filename='{0} Event {1} {2} Slope.png'.format(slope_path, flare_index, column),
+                                                                               verbose=verbose, logger=logger)
 
-                jedi_row[column + ' Slope Min [%/s]'] = slope_min
-                jedi_row[column + ' Slope Max [%/s]'] = slope_max
-                jedi_row[column + ' Slope Mean [%/s]'] = slope_mean
-                # jedi_row[column + ' Slope Uncertainty [%]'] = slope_uncertainty  # TODO: make determine_dimming_depth return the propagated uncertainty
-                jedi_row[column + ' Slope Start Time'] = slope_start_time
-                jedi_row[column + ' Slope End Time'] = slope_end_time
+                    jedi_row[column + ' Slope Min [%/s]'] = slope_min
+                    jedi_row[column + ' Slope Max [%/s]'] = slope_max
+                    jedi_row[column + ' Slope Mean [%/s]'] = slope_mean
+                    # jedi_row[column + ' Slope Uncertainty [%]'] = slope_uncertainty  # TODO: make determine_dimming_depth return the propagated uncertainty
+                    jedi_row[column + ' Slope Start Time'] = slope_start_time
+                    jedi_row[column + ' Slope End Time'] = slope_end_time
 
-                # Determine dimming duration (if any)
-                duration_path = output_path + 'Duration/'
-                if not os.path.exists(duration_path):
-                    os.makedirs(duration_path)
+                    # Determine dimming duration (if any)
+                    duration_path = output_path + 'Duration/'
+                    if not os.path.exists(duration_path):
+                        os.makedirs(duration_path)
 
-                plt.close('all')
-                duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(eve_line_event,
-                                                                                                      earliest_allowed_time=slope_start_time,
-                                                                                                      plot_path_filename='{0} Event {1} {2} Duration.png'.format(duration_path, flare_index, column),
-                                                                                                      verbose=verbose, logger=logger)
+                    plt.close('all')
+                    duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(eve_line_event,
+                                                                                                          earliest_allowed_time=slope_start_time,
+                                                                                                          plot_path_filename='{0} Event {1} {2} Duration.png'.format(duration_path, flare_index, column),
+                                                                                                          verbose=verbose, logger=logger)
 
-                jedi_row[column + ' Duration [s]'] = duration_seconds
-                jedi_row[column + ' Duration Start Time'] = duration_start_time
-                jedi_row[column + ' Duration End Time'] = duration_end_time
+                    jedi_row[column + ' Duration [s]'] = duration_seconds
+                    jedi_row[column + ' Duration Start Time'] = duration_start_time
+                    jedi_row[column + ' Duration End Time'] = duration_end_time
 
                 if verbose:
-                    logger.info("Event {0} parameterizations complete.".format(flare_index))
+                    logger.info("Event {0} {1} parameterizations complete.".format(flare_index, column))
 
                 # Produce a summary plot for each light curve
                 plt.style.use('jpm-transparent-light')
