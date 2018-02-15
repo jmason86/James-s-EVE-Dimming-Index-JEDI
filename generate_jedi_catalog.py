@@ -439,7 +439,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                 ax.xaxis.set_major_locator(dates.HourLocator())
                 plt.title('Event {0} {1} nm Parameters'.format(flare_index, column))
 
-                if depth_percent:
+                if not np.isnan(depth_percent):
                     plt.annotate('', xy=(depth_time, -depth_percent), xycoords='data',
                                  xytext=(depth_time, 0), textcoords='data',
                                  arrowprops=dict(facecolor='limegreen', edgecolor='limegreen', linewidth=2))
@@ -447,7 +447,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                     plt.annotate('{0:.2f} %'.format(depth_percent), xy=(depth_time, mid_depth), xycoords='data',
                                  ha='right', va='center', rotation=90, size=18, color='limegreen')
 
-                if slope_mean:
+                if not np.isnan(slope_mean):
                     if pd.isnull(slope_start_time) or pd.isnull(slope_end_time):
                         import pdb
                         pdb.set_trace()
@@ -464,7 +464,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                                  xy=(0.98, 0.04), xycoords='axes fraction', ha='right',
                                  size=12, color=p[0].get_color())
 
-                if duration_seconds:
+                if not np.isnan(duration_seconds):
                     plt.annotate('', xy=(duration_start_time, 0), xycoords='data',
                                  xytext=(duration_end_time, 0), textcoords='data',
                                  arrowprops=dict(facecolor='dodgerblue', edgecolor='dodgerblue', linewidth=5, arrowstyle='<->'))
