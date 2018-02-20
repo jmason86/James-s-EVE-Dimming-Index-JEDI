@@ -131,13 +131,13 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
 
     # Define the columns of the JEDI catalog
     jedi_row = pd.DataFrame([OrderedDict([
-                             ("Event #", np.nan),
-                             ("GOES Flare Start Time", np.nan),
-                             ("GOES Flare Peak Time", np.nan),
-                             ("GOES Flare Class", np.nan),
-                             ("Pre-Flare Start Time", np.nan),
-                             ("Pre-Flare End Time", np.nan),
-                             ("Flare Interrupt", np.nan)])])
+                             ('Event #', np.nan),
+                             ('GOES Flare Start Time', np.nan),
+                             ('GOES Flare Peak Time', np.nan),
+                             ('GOES Flare Class', np.nan),
+                             ('Pre-Flare Start Time', np.nan),
+                             ('Pre-Flare End Time', np.nan),
+                             ('Flare Interrupt', np.nan)])])
     jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Pre-Flare Irradiance [W/m2]'))
     jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Start Time'))
     jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope End Time'))
@@ -258,7 +258,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
             # Skip event if the dimming window is too short
             if ((bracket_time_right - bracket_time_left).sec / 60.0) < threshold_minimum_dimming_window_minutes:
                 # Leave all dimming parameters as NaN and write this null result to the CSV on disk
-                jedi_row.to_csv(csv_filename, header=False, mode='a')
+                jedi_row.to_csv(csv_filename, header=False, index=False, mode='a')
 
                 # Log message
                 if verbose:
@@ -482,7 +482,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                     logger.info("Summary plot saved to %s" % summary_filename)
 
         # Write to the JEDI catalog on disk
-        jedi_row.to_csv(csv_filename, header=False, mode='a')
+        jedi_row.to_csv(csv_filename, header=False, index=False, mode='a')
         if verbose:
             logger.info('Event {0} JEDI row written to {1}.'.format(flare_index, csv_filename))
 
