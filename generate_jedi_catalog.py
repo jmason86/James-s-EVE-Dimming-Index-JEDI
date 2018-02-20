@@ -187,7 +187,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
 
     # Prepare a hold-over pre-flare irradiance value,
     # which will normally have one element for each of the 39 emission lines
-    preflare_irradiance = None
+    preflare_irradiance = np.nan
 
     # Start loop through all flares
     for flare_index in flare_index_range:
@@ -208,8 +208,9 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
             logger.info("Event {0} GOES flare details stored to JEDI row.".format(flare_index))
 
         # If haven't already done all pre-parameterization processing
+        processed_jedi_non_params_filename = output_path + 'Processed Pre-Parameterization Data/Event {0} Pre-Parameterization.h5'.format(flare_index)
         processed_lines_filename = output_path + 'Processed Lines Data/Event {0} Lines.h5'.format(flare_index)
-        if not os.path.isfile(processed_lines_filename):
+        if not os.path.isfile(processed_lines_filename) or not os.path.isfile(processed_jedi_non_params_filename):
             # Determine pre-flare irradiance
             minutes_since_last_flare = (goes_flare_events['peak_time'][flare_index] - goes_flare_events['peak_time'][flare_index - 1]).sec / 60.0
             if minutes_since_last_flare > threshold_time_prior_flare_minutes:
@@ -348,11 +349,13 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
             progress_bar_fitting.finish()
 
             # Save the dimming event data to disk for quicker restore
+            jedi_row.to_hdf(processed_jedi_non_params_filename, 'jedi_row')
             eve_lines_event.to_hdf(processed_lines_filename, 'eve_lines_event')
         else:
+            jedi_row = pd.read_hdf(processed_jedi_non_params_filename, 'jedi_row')
             eve_lines_event = pd.read_hdf(processed_lines_filename, 'eve_lines_event')
             if verbose:
-                logger.info('Loading file {0} rather than processing again.'.format(processed_lines_filename))
+                logger.info('Loading files {0} and {1} rather than processing again.'.format(processed_jedi_non_params_filename, processed_lines_filename))
 
         # Parameterize the light curves for dimming
         for column in eve_lines_event:
