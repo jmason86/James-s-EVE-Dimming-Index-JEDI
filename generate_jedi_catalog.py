@@ -130,7 +130,9 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
         logger.info('Loaded GOES flare events.')
 
     # Define the columns of the JEDI catalog
-    jedi_row = pd.DataFrame([OrderedDict([("GOES Flare Start Time", np.nan),
+    jedi_row = pd.DataFrame([OrderedDict([
+                             ("Event #", np.nan),
+                             ("GOES Flare Start Time", np.nan),
                              ("GOES Flare Peak Time", np.nan),
                              ("GOES Flare Class", np.nan),
                              ("Pre-Flare Start Time", np.nan),
@@ -173,7 +175,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
     jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Fitting Score'))
 
     csv_filename = output_path + 'jedi_{0}.csv'.format(Time.now().iso)
-    jedi_row.to_csv(csv_filename, header=True, mode='w')
+    jedi_row.to_csv(csv_filename, header=True, index=False, mode='w')
 
     if verbose:
         logger.info('Created JEDI row definition.')
@@ -190,24 +192,24 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
     # Start loop through all flares
     for flare_index in flare_index_range:
 
+        # Skip event 0 to avoid problems with referring to earlier indices
+        if flare_index == 0:
+            continue
+
+        # Reset the flare interrupt flag
+        flare_interrupt = False
+
+        # Fill the GOES flare information into the JEDI row
+        jedi_row['Event #'] = flare_index
+        jedi_row['GOES Flare Start Time'] = goes_flare_events['start_time'][flare_index].iso
+        jedi_row['GOES Flare Peak Time'] = goes_flare_events['peak_time'][flare_index].iso
+        jedi_row['GOES Flare Class'] = goes_flare_events['class'][flare_index]
+        if verbose:
+            logger.info("Event {0} GOES flare details stored to JEDI row.".format(flare_index))
+
         # If haven't already done all pre-parameterization processing
         processed_lines_filename = output_path + 'Processed Lines Data/Event {0} Lines.h5'.format(flare_index)
         if not os.path.isfile(processed_lines_filename):
-
-            # Skip event 0 to avoid problems with referring to earlier indices
-            if flare_index == 0:
-                continue
-
-            # Reset the flare interrupt flag
-            flare_interrupt = False
-
-            # Fill the GOES flare information into the JEDI row
-            jedi_row['GOES Flare Start Time'] = goes_flare_events['start_time'][flare_index].iso
-            jedi_row['GOES Flare Peak Time'] = goes_flare_events['peak_time'][flare_index].iso
-            jedi_row['GOES Flare Class'] = goes_flare_events['class'][flare_index]
-            if verbose:
-                logger.info("Event {0} GOES flare details stored to JEDI row.".format(flare_index))
-
             # Determine pre-flare irradiance
             minutes_since_last_flare = (goes_flare_events['peak_time'][flare_index] - goes_flare_events['peak_time'][flare_index - 1]).sec / 60.0
             if minutes_since_last_flare > threshold_time_prior_flare_minutes:
@@ -240,7 +242,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
 
             # Clip EVE data to dimming window
             bracket_time_left = (goes_flare_events['peak_time'][flare_index] - (dimming_window_relative_to_flare_minutes_left * u.minute))
-            next_flare_time = (goes_flare_events['peak_time'][flare_index + 1]).iso
+            next_flare_time = Time((goes_flare_events['peak_time'][flare_index + 1]).iso)
             user_choice_time = (goes_flare_events['peak_time'][flare_index] + (dimming_window_relative_to_flare_minutes_right * u.minute))
             bracket_time_right = min(next_flare_time, user_choice_time)
 
