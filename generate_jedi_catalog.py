@@ -359,18 +359,19 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
 
         # Parameterize the light curves for dimming
         for column in eve_lines_event:
+            # Null out all parameters
+            depth_percent, depth_time = np.nan, np.nan
+            slope_start_time, slope_end_time = np.nan, np.nan
+            slope_min, slope_max, slope_mean = np.nan, np.nan, np.nan
+            duration_seconds, duration_start_time, duration_end_time = np.nan, np.nan, np.nan
+
+            # Determine whether to do the parameterizations or not
             if (eve_lines_event[column].isnull().all().all()):
                 if verbose:
                     logger.info('Event {0} {1} parameterization skipped because all irradiances are NaN.'.format(flare_index, column))
             else:
                 eve_line_event = pd.DataFrame(eve_lines_event[column])
                 eve_line_event.columns = ['irradiance']
-
-                # Null out all parameters
-                depth_percent, depth_time = np.nan, np.nan
-                slope_start_time, slope_end_time = np.nan, np.nan
-                slope_min, slope_max, slope_mean = np.nan, np.nan, np.nan
-                duration_seconds, duration_start_time, duration_end_time = np.nan, np.nan, np.nan
 
                 # Determine dimming depth (if any)
                 depth_path = output_path + 'Depth/'
