@@ -196,6 +196,9 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
         if flare_index == 0:
             continue
 
+        # Reset jedi_row
+        jedi_row[:] = np.nan
+
         # Reset the flare interrupt flag
         flare_interrupt = False
 
