@@ -10,7 +10,6 @@ import astropy.units as u
 from astropy.time import Time
 import progressbar
 
-
 # Custom modules
 from jpm_logger import JpmLogger
 from jpm_number_printing import latex_float
@@ -362,6 +361,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
 
         # Parameterize the light curves for dimming
         for column in eve_lines_event:
+
             # Null out all parameters
             depth_percent, depth_time = np.nan, np.nan
             slope_start_time, slope_end_time = np.nan, np.nan
@@ -497,3 +497,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
         progress_bar.update(flare_index)
 
     progress_bar.finish()
+
+
+if __name__ == '__main__':
+    generate_jedi_catalog(verbose=True, flare_index_range=range(10, 20))
