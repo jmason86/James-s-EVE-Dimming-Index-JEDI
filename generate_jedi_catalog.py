@@ -97,9 +97,28 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
     metadata['precision'] = ['Not implemented in prototype']
     metadata['accuracy'] = ['Not implemented in prototype']
     metadata['flags'] = ['Not implemented in prototype']
-    metadata['flags_description'] = "1 = MEGS-A data is missing, 2 = MEGS-B data is missing, 4 = ESP data is missing, 8 = MEGS-P data is missing, 16 = Possible clock adjust in MEGS-A, 32 = Possible clock adjust in MEGS-B, 64 = Possible clock adjust in ESP, 128 = Possible clock adjust in MEGS-P"
+    metadata['flags_description'] = '1 = MEGS-A data is missing, ' \
+                                    '2 = MEGS-B data is missing, ' \
+                                    '4 = ESP data is missing, ' \
+                                    '8 = MEGS-P data is missing, ' \
+                                    '16 = Possible clock adjust in MEGS-A, ' \
+                                    '32 = Possible clock adjust in MEGS-B, ' \
+                                    '64 = Possible clock adjust in ESP, ' \
+                                    '128 = Possible clock adjust in MEGS-P'
     metadata['flags_spacecraft'] = ['Not implemented in prototype']
-    metadata['flags_spacecraft_description'] = "0 = No obstruction, 1 = Warmup from Earth eclipse, 2 = Obstruction atmosphere penumbra, 3 = Obstruction atmosphere umbra, 4 = Obstruction penumbra of Mercury, 5 = Obstruction penumbra of Mercury, 6 = Obstruction penumbra of Venus, 7 = Obstruction umbra of Venus, 8 = Obstruction penumbra of Moon, 9 = Obstruction umbra of Moon, 10 = Obstruction penumbra of solid Earth, 11 = Obstruction umbra of solid Earth, 16 = Observatory is off-pointed by more than 1 arcmin"
+    metadata['flags_spacecraft_description'] = '0 = No obstruction, ' \
+                                               '1 = Warm up from Earth eclipse, ' \
+                                               '2 = Obstruction atmosphere penumbra, ' \
+                                               '3 = Obstruction atmosphere umbra, ' \
+                                               '4 = Obstruction penumbra of Mercury, ' \
+                                               '5 = Obstruction penumbra of Mercury, ' \
+                                               '6 = Obstruction penumbra of Venus, ' \
+                                               '7 = Obstruction umbra of Venus, ' \
+                                               '8 = Obstruction penumbra of Moon, ' \
+                                               '9 = Obstruction umbra of Moon, ' \
+                                               '10 = Obstruction penumbra of solid Earth, ' \
+                                               '11 = Obstruction umbra of solid Earth, ' \
+                                               '16 = Observatory is off-pointed by more than 1 arcmin'
     metadata['data_version'] = ['Not implemented in prototype']
     metadata['data_reprocessed_revision'] = ['Not implemented in prototype']
     metadata['filename'] = ['Not implemented in prototype']
@@ -323,7 +342,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
             progress_bar_fitting = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Light curve fitting: ')] + widgets,
                                                            max_value=len(eve_lines_event.columns)).start()
             for i, column in enumerate(eve_lines_event):
-                if (eve_lines_event[column].isnull().all().all()):
+                if eve_lines_event[column].isnull().all().all():
                     if verbose:
                         logger.info('Event {0} {1} fitting skipped because all irradiances are NaN.'.format(flare_index, column))
                 else:
@@ -369,7 +388,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
             duration_seconds, duration_start_time, duration_end_time = np.nan, np.nan, np.nan
 
             # Determine whether to do the parameterizations or not
-            if (eve_lines_event[column].isnull().all().all()):
+            if eve_lines_event[column].isnull().all().all():
                 if verbose:
                     logger.info('Event {0} {1} parameterization skipped because all irradiances are NaN.'.format(flare_index, column))
             else:
