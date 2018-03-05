@@ -51,6 +51,12 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
             logger = JpmLogger(filename='determine_preflare_irradiance_log', path='/Users/jmason86/Desktop/')
         logger.info("Running on event with peak start time of {0}.".format(estimated_time_of_peak_start))
 
+    # Verify that not all values are nan
+    if light_curve_df.isna().all().all():
+        if verbose:
+            logger.warning("All irradiance values are NaN. Returning.")
+        return np.nan
+
     # Convert irradiance to percent if not already present
     if 'irradiance_percent' not in light_curve_df.columns:
         median_irradiance = light_curve_df['irradiance'].median()
@@ -120,7 +126,7 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
         light_curve_df[:estimated_time_of_peak_start].plot(ax=ax2, legend=False, c='grey')
         #  ax2.plot(light_curve_df[:estimated_time_of_peak_start].irradiance, color='grey')
         vals = ax2.get_yticks()
-        ax2.set_yticklabels(['{:3.2f}%'.format((x - light_curve_df.irradiance[0]) / light_curve_df.irradiance[0] * 100)
+        ax2.set_yticklabels(['{:3.2f}%'.format((x - median_irradiance) / median_irradiance * 100)
                              for x in vals])
 
         # First window
@@ -145,8 +151,8 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
         plt.plot([windows[1].index[0], windows[1].index[-1]], [medians_abs[1], medians_abs[1]],
                  linestyle='dashed', c='dimgrey')
         ax.text(start + width / 2.0, np.min(light_curve_df[:estimated_time_of_peak_start].irradiance),
-                'median = ' + latex_float(medians[1]) + '% \n' +
-                '$\sigma$ = ' + latex_float(stds[1]) + '%', fontsize=12,
+                'median$_1$ = ' + latex_float(medians[1]) + '% \n' +
+                '$\sigma_1$ = ' + latex_float(stds[1]) + '%', fontsize=12,
                 ha='center', va='bottom')
 
         if preflare_irradiance:
@@ -157,8 +163,8 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
         else:
             ax.text(start + width / 2.0, np.max(light_curve_df[:estimated_time_of_peak_start].irradiance),
                     'pre-flare irradiance = N/A \n' +
-                    'median condition ok: ' + str(not failed_median_threshold) + '\n' +
-                    '$\sigma$ condition ok: ' + str(not failed_std_threshold), fontsize=12,
+                    'median$_2$ condition ok: ' + str(not failed_median_threshold) + '\n' +
+                    '$\sigma_2$ condition ok: ' + str(not failed_std_threshold), fontsize=12,
                     ha='center', va='top', color='tomato')
 
         # Third window
@@ -170,9 +176,12 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
         plt.plot([windows[2].index[0], windows[2].index[-1]], [medians_abs[2], medians_abs[2]],
                  linestyle='dashed', c='dimgrey')
         ax.text(start + width / 2.0, np.min(light_curve_df[:estimated_time_of_peak_start].irradiance),
-                'median = ' + latex_float(medians[2]) + '% \n' +
-                '$\sigma$ = ' + latex_float(stds[2]) + '%', fontsize=12,
+                'median$_3$ = ' + latex_float(medians[2]) + '% \n' +
+                '$\sigma_3$ = ' + latex_float(stds[2]) + '%', fontsize=12,
                 ha='center', va='bottom')
+
+        # Increase border so y-axes don't get cut off in savefig, even though they don't in plt.show()
+        plt.gcf().subplots_adjust(left=0.22)
 
         plt.savefig(plot_path_filename)
         if verbose:
