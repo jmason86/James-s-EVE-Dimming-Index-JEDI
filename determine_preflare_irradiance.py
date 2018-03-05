@@ -12,7 +12,7 @@ __contact__ = 'jmason86@gmail.com'
 
 
 def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
-                                  max_median_diff_threshold=10.0, std_threshold=0.5,
+                                  max_median_diff_threshold=1.5, std_threshold=0.5,
                                   plot_path_filename=None, verbose=False, logger=None):
     """Determine pre-flare irradiance level in a solar light curve.
     Or, more generally, find the pre-peak level in a time series.
@@ -24,7 +24,8 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
 
     Optional Inputs:
         max_median_diff_threshold [float]: The maximum allowed difference in medians between the 3 pre-flare windows
-                                           in percent terms. The default is 10.
+                                           in percent terms. This value gets multiplied by the mean of the stds from
+                                           each sub-window and is then compared to the max_median_diff. The default is 1.5.
         std_threshold [float]:             The maximum allowed standard deviation in the pre-flare windows in percent
                                            terms. The default is 0.5.
         plot_path_filename [str]:          Set to a path and filename in order to save the summary plot to disk.
@@ -82,15 +83,16 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
     # Compare medians and σs in each window to thresholds
     failed_median_threshold = False
     failed_std_threshold = False
-    if max_median_diff > max_median_diff_threshold:
-        if verbose:
-            logger.warning('Cannot compute pre-flare irradiance. Maximum difference in window medians ({0}) exceeded threshold ({1}).'.format(max_median_diff, max_median_diff_threshold))
-        failed_median_threshold = True
     if np.all(np.isnan(stds)):
         if verbose:
             logger.warning('Cannot compute pre-flare irradiance. All standard deviations are nan.')
         failed_std_threshold = True
     else:
+        if max_median_diff > max_median_diff_threshold * np.mean(stds):
+            if verbose:
+                logger.warning(
+                    'Cannot compute pre-flare irradiance. Maximum difference in window medians ({0}) exceeded threshold ({1}).'.format(max_median_diff, max_median_diff_threshold * np.mean(stds)))
+            failed_median_threshold = True
         if (stds < std_threshold).sum() < 2:
             if verbose:
                 logger.warning('Cannot compute pre-flare irradiance. Standard deviation in more than 1 window is larger than threshold ({0}).'.format(std_threshold))
@@ -138,9 +140,9 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
         plt.plot([windows[0].index[0], windows[0].index[-1]], [medians_abs[0], medians_abs[0]],
                  linestyle='dashed', c='dimgrey')
         ax.text(start + width / 2.0, np.min(light_curve_df[:estimated_time_of_peak_start].irradiance),
-                'median = ' + latex_float(medians[0]) + '% \n' +
-                '$\sigma$ = ' + latex_float(stds[0]) + '%', fontsize=12,
-                ha='center', va='bottom')
+                'median$_1$ = ' + latex_float(medians[0]) + '% \n' +
+                '$\sigma_1$ = ' + latex_float(stds[0]) + '%',
+                fontsize=11, ha='center', va='bottom')
 
         # Second window
         start = dates.date2num(windows[1].index[0])
@@ -151,21 +153,21 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
         plt.plot([windows[1].index[0], windows[1].index[-1]], [medians_abs[1], medians_abs[1]],
                  linestyle='dashed', c='dimgrey')
         ax.text(start + width / 2.0, np.min(light_curve_df[:estimated_time_of_peak_start].irradiance),
-                'median$_1$ = ' + latex_float(medians[1]) + '% \n' +
-                '$\sigma_1$ = ' + latex_float(stds[1]) + '%', fontsize=12,
-                ha='center', va='bottom')
+                'median$_2$ = ' + latex_float(medians[1]) + '% \n' +
+                '$\sigma_2$ = ' + latex_float(stds[1]) + '%',
+                fontsize=11, ha='center', va='bottom')
 
-        if preflare_irradiance:
+        if not np.isnan(preflare_irradiance):
             ax.axes.axhline(y=preflare_irradiance, linewidth=2, color='tomato', linestyle='dashed')
             ax.text(start + width / 2.0, np.max(light_curve_df[:estimated_time_of_peak_start].irradiance),
-                    'pre-flare irradiance = ' + latex_float(preflare_irradiance) + ' W m$^{-2}$', fontsize=12,
-                    ha='center', va='top', color='tomato')
+                    'pre-flare I = ' + latex_float(preflare_irradiance) + ' W m$^{-2}$',
+                    fontsize=11, ha='center', va='top', color='tomato')
         else:
             ax.text(start + width / 2.0, np.max(light_curve_df[:estimated_time_of_peak_start].irradiance),
-                    'pre-flare irradiance = N/A \n' +
-                    'median$_2$ condition ok: ' + str(not failed_median_threshold) + '\n' +
-                    '$\sigma_2$ condition ok: ' + str(not failed_std_threshold), fontsize=12,
-                    ha='center', va='top', color='tomato')
+                    'pre-flare I = N/A \n' +
+                    'median condition ok: ' + str(not failed_median_threshold) + '\n' +
+                    '$\sigma$ condition ok: ' + str(not failed_std_threshold),
+                    fontsize=11, ha='center', va='top', color='tomato')
 
         # Third window
         start = dates.date2num(windows[2].index[0])
@@ -177,8 +179,12 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
                  linestyle='dashed', c='dimgrey')
         ax.text(start + width / 2.0, np.min(light_curve_df[:estimated_time_of_peak_start].irradiance),
                 'median$_3$ = ' + latex_float(medians[2]) + '% \n' +
-                '$\sigma_3$ = ' + latex_float(stds[2]) + '%', fontsize=12,
-                ha='center', va='bottom')
+                '$\sigma_3$ = ' + latex_float(stds[2]) + '%',
+                fontsize=11, ha='center', va='bottom')
+        ax.text(end, np.max(light_curve_df[:estimated_time_of_peak_start].irradiance),
+                'median diff = ' + latex_float(max_median_diff) + '% \n' +
+                r'thresh $\times \mu_{\sigma n}$ = ' + latex_float(max_median_diff_threshold * np.mean(stds)) + '%',
+                fontsize=11, ha='right', va='top')
 
         # Increase border so y-axes don't get cut off in savefig, even though they don't in plt.show()
         plt.gcf().subplots_adjust(left=0.22)
