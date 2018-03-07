@@ -12,7 +12,7 @@ __contact__ = 'jmason86@gmail.com'
 
 
 def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
-                                  max_median_diff_threshold=1.5, std_threshold=0.5,
+                                  max_median_diff_threshold=1.5, std_threshold=1.0,
                                   plot_path_filename=None, verbose=False, logger=None):
     """Determine pre-flare irradiance level in a solar light curve.
     Or, more generally, find the pre-peak level in a time series.
