@@ -15,8 +15,8 @@ __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
 
 
-def automatic_fit_coronal_dimming_light_curve(light_curve_df, minimum_score=0.3, plots_save_path=None,
-                                              verbose=False, logger=None):
+def automatic_fit_light_curve(light_curve_df, minimum_score=0.3, plots_save_path=None,
+                              verbose=False, logger=None):
     """Automatically fit the best support vector machine regression (SVR) model for the input light curve.
 
     Inputs:
@@ -41,13 +41,13 @@ def automatic_fit_coronal_dimming_light_curve(light_curve_df, minimum_score=0.3,
         None
 
     Example:
-        light_curve_fit, best_fit_gamma, best_fit_score = automatic_fit_coronal_dimming_light_curve(light_curve_df, verbose=True)
+        light_curve_fit, best_fit_gamma, best_fit_score = automatic_fit_light_curve(light_curve_df, verbose=True)
     """
 
     # Prepare the logger for verbose
     if verbose:
         if not logger:
-            logger = JpmLogger(filename='automatic_fit_coronal_dimming_light_curve_log', path='/Users/jmason86/Desktop/')
+            logger = JpmLogger(filename='automatic_fit_light_curve_log', path='/Users/jmason86/Desktop/')
         logger.info("Running on event with light curve start time of {0}.".format(light_curve_df.index[0]))
 
     # Pull data out of the DataFrame for compatibility formatting
@@ -78,13 +78,17 @@ def automatic_fit_coronal_dimming_light_curve(light_curve_df, minimum_score=0.3,
     evs = make_scorer(explained_variance_score)
 
     # Split the data between training/testing 50/50 but across the whole time range rather than the default consecutive Kfolds
-    shuffle_split = ShuffleSplit(n_splits=150, train_size=0.5, test_size=0.5, random_state=None)
+    import time
+    t0 = time.time()
+    shuffle_split = ShuffleSplit(n_splits=20, train_size=0.5, test_size=0.5, random_state=None)
 
     # Generate the validation curve -- test all them gammas!
     # Parallelized to speed it up (n_jobs = # of parallel threads)
     train_score, val_score = validation_curve(jpm_svr(), X, y,
                                               'svr__gamma',
                                               gamma, cv=shuffle_split, n_jobs=7, scoring=evs)
+    t1 = time.time()
+    logger.error('It took {0} seconds to run.'.format(t1 - t0))
 
     if verbose:
         logger.info("Validation curve complete.")

@@ -17,7 +17,7 @@ from jpm_number_printing import latex_float
 # from get_goes_flare_events import get_goes_flare_events  # TODO: Uncomment once sunpy method implemented
 from determine_preflare_irradiance import determine_preflare_irradiance
 from light_curve_peak_match_subtract import light_curve_peak_match_subtract
-from automatic_fit_coronal_dimming_light_curve import automatic_fit_coronal_dimming_light_curve
+from automatic_fit_light_curve import automatic_fit_light_curve
 from determine_dimming_depth import determine_dimming_depth
 from determine_dimming_slope import determine_dimming_slope
 from determine_dimming_duration import determine_dimming_duration
@@ -334,42 +334,42 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                     progress_bar_correction.update(i)
 
             progress_bar_correction.finish()
-        #
-        #     # TODO: Update calculate_eve_fe_line_precision to compute for all emission lines, not just selected
-        #     uncertainty = np.ones(len(eve_lines_event)) * 0.002545
-        #
-        #     # TODO: Propagate uncertainty through light_curve_peak_match_subtract and store in eve_lines_event
-        #
-        #     # Fit the light curves to reduce influence of noise on the parameterizations to come later
-        #     progress_bar_fitting = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Light curve fitting: ')] + widgets,
-        #                                                    max_value=len(eve_lines_event.columns)).start()
-        #     for i, column in enumerate(eve_lines_event):
-        #         if eve_lines_event[column].isnull().all().all():
-        #             if verbose:
-        #                 logger.info('Event {0} {1} fitting skipped because all irradiances are NaN.'.format(flare_index, column))
-        #         else:
-        #             eve_line_event = pd.DataFrame(eve_lines_event[column])
-        #             eve_line_event.columns = ['irradiance']
-        #             eve_line_event['uncertainty'] = uncertainty
-        #
-        #             fitting_path = output_path + 'Fitting/'
-        #             if not os.path.exists(fitting_path):
-        #                 os.makedirs(fitting_path)
-        #
-        #             plt.close('all')
-        #             light_curve_fit, best_fit_gamma, best_fit_score = automatic_fit_coronal_dimming_light_curve(eve_line_event,
-        #                                                                                                         plots_save_path='{0} Event {1} {2} '.format(fitting_path, flare_index, column),
-        #                                                                                                         verbose=verbose, logger=logger)
-        #             eve_lines_event[column] = light_curve_fit
-        #             jedi_row[column + ' Fitting Gamma'] = best_fit_gamma
-        #             jedi_row[column + ' Fitting Score'] = best_fit_score
-        #
-        #             if verbose:
-        #                 logger.info('Event {0} {1} light curves fitted.'.format(flare_index, column))
-        #             progress_bar_fitting.update(i)
-        #
-        #     progress_bar_fitting.finish()
-        #
+
+            # TODO: Update calculate_eve_fe_line_precision to compute for all emission lines, not just selected
+            uncertainty = np.ones(len(eve_lines_event)) * 0.002545
+
+            # TODO: Propagate uncertainty through light_curve_peak_match_subtract and store in eve_lines_event
+
+            # Fit the light curves to reduce influence of noise on the parameterizations to come later
+            progress_bar_fitting = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Light curve fitting: ')] + widgets,
+                                                           max_value=len(eve_lines_event.columns)).start()
+            for i, column in enumerate(eve_lines_event):
+                if eve_lines_event[column].isnull().all().all():
+                    if verbose:
+                        logger.info('Event {0} {1} fitting skipped because all irradiances are NaN.'.format(flare_index, column))
+                else:
+                    eve_line_event = pd.DataFrame(eve_lines_event[column])
+                    eve_line_event.columns = ['irradiance']
+                    eve_line_event['uncertainty'] = uncertainty
+
+                    fitting_path = output_path + 'Fitting/'
+                    if not os.path.exists(fitting_path):
+                        os.makedirs(fitting_path)
+
+                    plt.close('all')
+                    light_curve_fit, best_fit_gamma, best_fit_score = automatic_fit_light_curve(eve_line_event,
+                                                                                                plots_save_path='{0} Event {1} {2} '.format(fitting_path, flare_index, column),
+                                                                                                verbose=verbose, logger=logger)
+                    eve_lines_event[column] = light_curve_fit
+                    jedi_row[column + ' Fitting Gamma'] = best_fit_gamma
+                    jedi_row[column + ' Fitting Score'] = best_fit_score
+
+                    if verbose:
+                        logger.info('Event {0} {1} light curves fitted.'.format(flare_index, column))
+                    progress_bar_fitting.update(i)
+
+            progress_bar_fitting.finish()
+
         #     # Save the dimming event data to disk for quicker restore
         #     jedi_row.to_hdf(processed_jedi_non_params_filename, 'jedi_row')
         #     eve_lines_event.to_hdf(processed_lines_filename, 'eve_lines_event')
