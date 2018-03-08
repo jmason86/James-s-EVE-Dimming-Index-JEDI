@@ -256,84 +256,84 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
                             .format(goes_flare_events['peak_time'][flare_index].iso,
                                     goes_flare_events['peak_time'][flare_index - 1].iso))
 
-        #     jedi_row["Pre-Flare Start Time"] = preflare_window_start
-        #     jedi_row["Pre-Flare End Time"] = preflare_window_end
-        #     preflare_irradiance_cols = [col for col in jedi_row.columns if 'Pre-Flare Irradiance' in col]
-        #     jedi_row[preflare_irradiance_cols] = preflare_irradiance
-        #
-        #     if verbose:
-        #         logger.info("Event {0} pre-flare determination complete.".format(flare_index))
-        #
-        #     # Clip EVE data to dimming window
-        #     bracket_time_left = (goes_flare_events['peak_time'][flare_index] - (dimming_window_relative_to_flare_minutes_left * u.minute))
-        #     next_flare_time = Time((goes_flare_events['peak_time'][flare_index + 1]).iso)
-        #     user_choice_time = (goes_flare_events['peak_time'][flare_index] + (dimming_window_relative_to_flare_minutes_right * u.minute))
-        #     bracket_time_right = min(next_flare_time, user_choice_time)
-        #
-        #     # If flare is shortening the window, set the flare_interrupt flag
-        #     if bracket_time_right == next_flare_time:
-        #         flare_interrupt = True
-        #         if verbose:
-        #             logger.info('Flare interrupt for event at {0} by flare at {1}'.format(goes_flare_events['peak_time'][flare_index].iso, next_flare_time))
-        #
-        #     # Write flare_interrupt to JEDI row
-        #     jedi_row['Flare Interrupt'] = flare_interrupt
-        #
-        #     # Skip event if the dimming window is too short
-        #     if ((bracket_time_right - bracket_time_left).sec / 60.0) < threshold_minimum_dimming_window_minutes:
-        #         # Leave all dimming parameters as NaN and write this null result to the CSV on disk
-        #         jedi_row.to_csv(csv_filename, header=False, index=False, mode='a')
-        #
-        #         # Log message
-        #         if verbose:
-        #             logger.info('The dimming window duration of {0} minutes is shorter than the minimum threshold of {1} minutes. Skipping this event ({2})'
-        #                         .format(((bracket_time_right - bracket_time_left).sec / 60.0), threshold_minimum_dimming_window_minutes, goes_flare_events['peak_time'][flare_index]))
-        #
-        #         # Skip the rest of the processing in the flare_index loop
-        #         continue
-        #     else:
-        #         eve_lines_event = eve_lines[bracket_time_left.iso:bracket_time_right.iso]
-        #
-        #     if verbose:
-        #         logger.info("Event {0} EVE data clipped to dimming window.".format(flare_index))
-        #
-        #     # Convert irradiance units to percent
-        #     # (in place, don't care about absolute units from this point forward)
-        #     eve_lines_event = (eve_lines_event - preflare_irradiance) / preflare_irradiance * 100.0
-        #
-        #     if verbose:
-        #         logger.info("Event {0} irradiance converted from absolute to percent units.".format(flare_index))
-        #
-        #     # Do flare removal in the light curves and add the results to the DataFrame
-        #     progress_bar_correction = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Peak Match Subtract: ')] + widgets,
-        #                                                       max_value=len(ion_tuples)).start()
-        #     for i in range(len(ion_tuples)):
-        #         light_curve_to_subtract_from_df = pd.DataFrame(eve_lines_event[ion_tuples[i][0]])
-        #         light_curve_to_subtract_from_df.columns = ['irradiance']
-        #         light_curve_to_subtract_with_df = pd.DataFrame(eve_lines_event[ion_tuples[i][1]])
-        #         light_curve_to_subtract_with_df.columns = ['irradiance']
-        #
-        #         if (light_curve_to_subtract_from_df.isnull().all().all()) or (light_curve_to_subtract_with_df.isnull().all().all()):
-        #             if verbose:
-        #                 logger.info('Event {0} {1} correction skipped because all irradiances are NaN.'.format(flare_index, ion_permutations[i]))
-        #         else:
-        #             light_curve_corrected, seconds_shift, scale_factor = light_curve_peak_match_subtract(light_curve_to_subtract_from_df,
-        #                                                                                                  light_curve_to_subtract_with_df,
-        #                                                                                                  pd.Timestamp((goes_flare_events['peak_time'][flare_index]).iso),
-        #                                                                                                  plot_path_filename=output_path + 'Peak Subtractions/Event {0} {1}.png'.format(flare_index, ion_permutations[i]),
-        #                                                                                                  verbose=verbose, logger=logger)
-        #
-        #             eve_lines_event[ion_permutations[i]] = light_curve_corrected
-        #             jedi_row[ion_permutations[i] + ' Correction Time Shift [s]'] = seconds_shift
-        #             jedi_row[ion_permutations[i] + ' Correction Scale Factor'] = scale_factor
-        #
-        #             plt.close('all')
-        #
-        #             if verbose:
-        #                 logger.info('Event {0} flare removal correction complete'.format(flare_index))
-        #             progress_bar_correction.update(i)
-        #
-        #     progress_bar_correction.finish()
+            jedi_row["Pre-Flare Start Time"] = preflare_window_start
+            jedi_row["Pre-Flare End Time"] = preflare_window_end
+            preflare_irradiance_cols = [col for col in jedi_row.columns if 'Pre-Flare Irradiance' in col]
+            jedi_row[preflare_irradiance_cols] = preflare_irradiance
+
+            if verbose:
+                logger.info("Event {0} pre-flare determination complete.".format(flare_index))
+
+            # Clip EVE data to dimming window
+            bracket_time_left = (goes_flare_events['peak_time'][flare_index] - (dimming_window_relative_to_flare_minutes_left * u.minute))
+            next_flare_time = Time((goes_flare_events['peak_time'][flare_index + 1]).iso)
+            user_choice_time = (goes_flare_events['peak_time'][flare_index] + (dimming_window_relative_to_flare_minutes_right * u.minute))
+            bracket_time_right = min(next_flare_time, user_choice_time)
+
+            # If flare is shortening the window, set the flare_interrupt flag
+            if bracket_time_right == next_flare_time:
+                flare_interrupt = True
+                if verbose:
+                    logger.info('Flare interrupt for event at {0} by flare at {1}'.format(goes_flare_events['peak_time'][flare_index].iso, next_flare_time))
+
+            # Write flare_interrupt to JEDI row
+            jedi_row['Flare Interrupt'] = flare_interrupt
+
+            # Skip event if the dimming window is too short
+            if ((bracket_time_right - bracket_time_left).sec / 60.0) < threshold_minimum_dimming_window_minutes:
+                # Leave all dimming parameters as NaN and write this null result to the CSV on disk
+                jedi_row.to_csv(csv_filename, header=False, index=False, mode='a')
+
+                # Log message
+                if verbose:
+                    logger.info('The dimming window duration of {0} minutes is shorter than the minimum threshold of {1} minutes. Skipping this event ({2})'
+                                .format(((bracket_time_right - bracket_time_left).sec / 60.0), threshold_minimum_dimming_window_minutes, goes_flare_events['peak_time'][flare_index]))
+
+                # Skip the rest of the processing in the flare_index loop
+                continue
+            else:
+                eve_lines_event = eve_lines[bracket_time_left.iso:bracket_time_right.iso]
+
+            if verbose:
+                logger.info("Event {0} EVE data clipped to dimming window.".format(flare_index))
+
+            # Convert irradiance units to percent
+            # (in place, don't care about absolute units from this point forward)
+            eve_lines_event = (eve_lines_event - preflare_irradiance) / preflare_irradiance * 100.0
+
+            if verbose:
+                logger.info("Event {0} irradiance converted from absolute to percent units.".format(flare_index))
+
+            # Do flare removal in the light curves and add the results to the DataFrame
+            progress_bar_correction = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Peak Match Subtract: ')] + widgets,
+                                                              max_value=len(ion_tuples)).start()
+            for i in range(len(ion_tuples)):
+                light_curve_to_subtract_from_df = pd.DataFrame(eve_lines_event[ion_tuples[i][0]])
+                light_curve_to_subtract_from_df.columns = ['irradiance']
+                light_curve_to_subtract_with_df = pd.DataFrame(eve_lines_event[ion_tuples[i][1]])
+                light_curve_to_subtract_with_df.columns = ['irradiance']
+
+                if (light_curve_to_subtract_from_df.isnull().all().all()) or (light_curve_to_subtract_with_df.isnull().all().all()):
+                    if verbose:
+                        logger.info('Event {0} {1} correction skipped because all irradiances are NaN.'.format(flare_index, ion_permutations[i]))
+                else:
+                    light_curve_corrected, seconds_shift, scale_factor = light_curve_peak_match_subtract(light_curve_to_subtract_from_df,
+                                                                                                         light_curve_to_subtract_with_df,
+                                                                                                         pd.Timestamp((goes_flare_events['peak_time'][flare_index]).iso),
+                                                                                                         plot_path_filename=output_path + 'Peak Subtractions/Event {0} {1}.png'.format(flare_index, ion_permutations[i]),
+                                                                                                         verbose=verbose, logger=logger)
+
+                    eve_lines_event[ion_permutations[i]] = light_curve_corrected
+                    jedi_row[ion_permutations[i] + ' Correction Time Shift [s]'] = seconds_shift
+                    jedi_row[ion_permutations[i] + ' Correction Scale Factor'] = scale_factor
+
+                    plt.close('all')
+
+                    if verbose:
+                        logger.info('Event {0} flare removal correction complete'.format(flare_index))
+                    progress_bar_correction.update(i)
+
+            progress_bar_correction.finish()
         #
         #     # TODO: Update calculate_eve_fe_line_precision to compute for all emission lines, not just selected
         #     uncertainty = np.ones(len(eve_lines_event)) * 0.002545
