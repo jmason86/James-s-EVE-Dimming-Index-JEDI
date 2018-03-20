@@ -9,6 +9,7 @@ from sklearn.svm import SVR
 
 # Custom modules
 from jpm_time_conversions import metatimes_to_seconds_since_start, datetimeindex_to_human
+from jpm_number_printing import latex_float
 from jpm_logger import JpmLogger
 
 __author__ = 'James Paul Mason'
@@ -72,14 +73,12 @@ def automatic_fit_light_curve(light_curve_df, minimum_score=0.3, plots_save_path
         return make_pipeline(SVR(kernel='rbf', C=1e3, gamma=gamma, **kwargs))
 
     # Hyper parameter for SVR is gamma, so generate values of it to try
-    gamma = np.logspace(-7, 1, num=20, base=10)
+    gamma = np.logspace(-10, -5, num=20, base=10)
 
     # Overwrite the default scorer (R^2) with explained variance score
     evs = make_scorer(explained_variance_score)
 
     # Split the data between training/testing 50/50 but across the whole time range rather than the default consecutive Kfolds
-    import time
-    t0 = time.time()
     shuffle_split = ShuffleSplit(n_splits=20, train_size=0.5, test_size=0.5, random_state=None)
 
     # Generate the validation curve -- test all them gammas!
@@ -87,28 +86,9 @@ def automatic_fit_light_curve(light_curve_df, minimum_score=0.3, plots_save_path
     train_score, val_score = validation_curve(jpm_svr(), X, y,
                                               'svr__gamma',
                                               gamma, cv=shuffle_split, n_jobs=7, scoring=evs)
-    t1 = time.time()
-    logger.error('It took {0} seconds to run.'.format(t1 - t0))
 
     if verbose:
         logger.info("Validation curve complete.")
-
-    if plots_save_path:
-        plt.clf()
-        plt.style.use('jpm-transparent-light')
-        plt.plot(gamma, np.median(train_score, 1), label='training score')
-        plt.plot(gamma, np.median(val_score, 1), label='validation score')
-        ax = plt.axes()
-        plt.legend(loc='best')
-        plt.title("t$_0$ = " + datetimeindex_to_human(light_curve_df.index)[0])
-        ax.set_xscale('log')
-        plt.xlabel('gamma')
-        plt.ylabel('score')
-        plt.ylim(0, 1)
-        filename = plots_save_path + 'Validation Curve t0 ' + datetimeindex_to_human(light_curve_df.index)[0] + '.png'
-        plt.savefig(filename)
-        if verbose:
-            logger.info("Validation curve saved to %s" % filename)
 
     # Identify the best score
     scores = np.median(val_score, axis=1)
@@ -118,6 +98,27 @@ def automatic_fit_light_curve(light_curve_df, minimum_score=0.3, plots_save_path
         logger.info('Scores: ' + str(scores))
         logger.info('Best score: ' + str(best_fit_score))
         logger.info('Best fit gamma: ' + str(best_fit_gamma))
+
+    if plots_save_path:
+        plt.clf()
+        plt.style.use('jpm-transparent-light')
+        p1 = plt.plot(gamma, np.median(train_score, 1), label='training score')
+        p2 = plt.plot(gamma, np.median(val_score, 1), label='validation score')
+        ax = plt.axes()
+        plt.legend(loc='best')
+        plt.title("t$_0$ = " + datetimeindex_to_human(light_curve_df.index)[0])
+        ax.set_xscale('log')
+        plt.xlabel('gamma')
+        plt.ylabel('score')
+        plt.ylim(0, 1)
+        p3 = plt.axhline(y=minimum_score, linestyle='dashed', color=p2[0].get_color())
+        p4 = plt.axvline(x=best_fit_gamma, linestyle='dashed', color='black')
+        t1 = plt.text(best_fit_gamma, minimum_score - 0.05, 'best score = ' + latex_float(best_fit_score) + '\nbest gamma = ' + latex_float(best_fit_gamma),
+                      ha='left', va='top')
+        filename = plots_save_path + 'Validation Curve t0 ' + datetimeindex_to_human(light_curve_df.index)[0] + '.png'
+        plt.savefig(filename)
+        if verbose:
+            logger.info("Validation curve saved to %s" % filename)
 
     # Return np.nan if only got bad fits
     if best_fit_score < minimum_score:
