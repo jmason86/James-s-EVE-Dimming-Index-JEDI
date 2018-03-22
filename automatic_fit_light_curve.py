@@ -16,7 +16,7 @@ __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
 
 
-def automatic_fit_light_curve(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10), minimum_score=0.3,
+def automatic_fit_light_curve(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10), minimum_score=0.5,
                               plots_save_path=None, verbose=False, logger=None):
     """Automatically fit the best support vector machine regression (SVR) model for the input light curve.
 
@@ -32,7 +32,7 @@ def automatic_fit_light_curve(light_curve_df, gamma=np.logspace(-10, -5, num=20,
                                Default is np.logspace(-10, -5, num=20, base=10).
         minimum_score [float]: Set this to the minimum explained variance score (0 - 1) acceptable for fits. If the
                                best fit score is < minimum_score, this function will return np.nan for light_curve_fit.
-                               Default value is 0.3.
+                               Default value is 0.5.
         plots_save_path [str]: Set to a path in order to save the validation curve and best fit overplot on the data to disk.
                                Default is None, meaning no plots will be saved to disk.
         verbose [bool]:        Set to log the processing messages to disk and console. Default is False.
