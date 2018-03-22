@@ -358,6 +358,7 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
 
                     plt.close('all')
                     light_curve_fit, best_fit_gamma, best_fit_score = automatic_fit_light_curve(eve_line_event,
+                                                                                                gamma=np.array([5e-8]),
                                                                                                 plots_save_path='{0} Event {1} {2} '.format(fitting_path, flare_index, column),
                                                                                                 verbose=verbose, logger=logger)
                     eve_lines_event[column] = light_curve_fit
