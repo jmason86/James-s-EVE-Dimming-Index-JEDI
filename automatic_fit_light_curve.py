@@ -16,14 +16,20 @@ __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
 
 
-def automatic_fit_light_curve(light_curve_df, minimum_score=0.3, plots_save_path=None,
-                              verbose=False, logger=None):
+def automatic_fit_light_curve(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10), minimum_score=0.3,
+                              plots_save_path=None, verbose=False, logger=None):
     """Automatically fit the best support vector machine regression (SVR) model for the input light curve.
 
     Inputs:
         light_curve_df [pd DataFrame]: A pandas DataFrame with a DatetimeIndex, and columns for irradiance and uncertainty.
 
     Optional Inputs:
+        gamma [np.array]:      Set this to an array of value(s), e.g., with np.logspace or np.linspace, to to use as the
+                               tunable hyperparameter in the support vector regression fitting.
+                               Note that the more elements in the array, the longer it will take to process the fits.
+                               If a single value is provided, the validation curve plot can't and won't be produced,
+                               but this is perfectly valid to do.
+                               Default is np.logspace(-10, -5, num=20, base=10).
         minimum_score [float]: Set this to the minimum explained variance score (0 - 1) acceptable for fits. If the
                                best fit score is < minimum_score, this function will return np.nan for light_curve_fit.
                                Default value is 0.3.
@@ -72,9 +78,6 @@ def automatic_fit_light_curve(light_curve_df, minimum_score=0.3, plots_save_path
     def jpm_svr(gamma=1e-6, **kwargs):
         return make_pipeline(SVR(kernel='rbf', C=1e3, gamma=gamma, **kwargs))
 
-    # Hyper parameter for SVR is gamma, so generate values of it to try
-    gamma = np.logspace(-10, -5, num=20, base=10)
-
     # Overwrite the default scorer (R^2) with explained variance score
     evs = make_scorer(explained_variance_score)
 
@@ -99,22 +102,22 @@ def automatic_fit_light_curve(light_curve_df, minimum_score=0.3, plots_save_path
         logger.info('Best score: ' + str(best_fit_score))
         logger.info('Best fit gamma: ' + str(best_fit_gamma))
 
-    if plots_save_path:
+    if plots_save_path and np.size(gamma) > 1:
         plt.clf()
         plt.style.use('jpm-transparent-light')
         p1 = plt.plot(gamma, np.median(train_score, 1), label='training score')
         p2 = plt.plot(gamma, np.median(val_score, 1), label='validation score')
         ax = plt.axes()
-        plt.legend(loc='best')
         plt.title("t$_0$ = " + datetimeindex_to_human(light_curve_df.index)[0])
         ax.set_xscale('log')
         plt.xlabel('gamma')
         plt.ylabel('score')
         plt.ylim(0, 1)
-        p3 = plt.axhline(y=minimum_score, linestyle='dashed', color=p2[0].get_color())
+        p3 = plt.axhline(y=minimum_score, linestyle='dashed', color=p2[0].get_color(), label='minimum score')
         p4 = plt.axvline(x=best_fit_gamma, linestyle='dashed', color='black')
         t1 = plt.text(best_fit_gamma, minimum_score - 0.05, 'best score = ' + latex_float(best_fit_score) + '\nbest gamma = ' + latex_float(best_fit_gamma),
                       ha='left', va='top')
+        plt.legend(loc='best')
         filename = plots_save_path + 'Validation Curve t0 ' + datetimeindex_to_human(light_curve_df.index)[0] + '.png'
         plt.savefig(filename)
         if verbose:
