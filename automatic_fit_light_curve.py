@@ -144,6 +144,9 @@ def automatic_fit_light_curve(light_curve_df, gamma=np.logspace(-10, -5, num=20,
         plt.title("t$_0$ = " + datetimeindex_to_human(light_curve_df.index)[0])
         plt.xlabel('time [seconds since start]')
         plt.ylabel('irradiance [%]')
+        t1 = plt.text(0.1, 0.1,
+                      'fit score = ' + latex_float(best_fit_score),
+                      ha='left', va='bottom', transform=plt.gca().transAxes)
         plt.legend(loc='best')
         filename = plots_save_path + 'Fit t0 ' + datetimeindex_to_human(light_curve_df.index)[0] + '.png'
         plt.savefig(filename)
