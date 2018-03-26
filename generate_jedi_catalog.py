@@ -5,11 +5,13 @@ from collections import OrderedDict
 import numpy as np
 import matplotlib as mpl
 mpl.use('macosx')
+from matplotlib import dates
 import pandas as pd
 import matplotlib.pyplot as plt
 import astropy.units as u
 from astropy.time import Time
 import progressbar
+import multiprocessing as mp
 
 # Custom modules
 from jpm_logger import JpmLogger
@@ -26,13 +28,13 @@ __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
 
 
-def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
+def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
+                          threshold_time_prior_flare_minutes=480.0,
                           dimming_window_relative_to_flare_minutes_left=0.0,
-                          dimming_window_relative_to_flare_minutes_right=240.0,
+                          dimming_window_relative_to_flare_minutes_right=1440.0,
                           threshold_minimum_dimming_window_minutes=120.0,
-                          flare_index_range=range(0, 5052),
                           output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
-                          verbose=False):
+                          verbose=True):
     """Wrapper code for creating James's Extreme Ultraviolet Variability Experiment (EVE) Dimming Index (JEDI) catalog.
 
     Inputs:
@@ -42,16 +44,20 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
         threshold_time_prior_flare_minutes [float]:             How long before a particular event does the last one need to have
                                                                 occurred to be considered independent. If the previous one was too
                                                                 recent, will use that event's pre-flare irradiance.
-                                                                Default is 240 (4 hours).
+                                                                The mean dimming time of 100 dimming events in
+                                                                Reinard and Biesecker (2008, 2009) is the default.
+                                                                Default is 480 (8 hours).
         dimming_window_relative_to_flare_minutes_left [float]:  Defines the left side of the time window to search for dimming
                                                                 relative to the GOES/XRS flare peak. Negative numbers mean
-                                                                minutes prior to the flare peak. Default is 0.0.
+                                                                minutes prior to the flare peak. Default is 0.
         dimming_window_relative_to_flare_minutes_right [float]: Defines the right side of the time window to search for dimming
                                                                 relative to the GOES/XRS flare peak. If another flare
                                                                 occurs before this, that time will define the end of the
-                                                                window instead. Default is 240 (4 hours).
+                                                                window instead. The time that "most" of the 100 dimming events had recovered
+                                                                by in Reinard and Biesecker (2008, 2009) is the default.
+                                                                Default is 1440 (24 hours).
         threshold_minimum_dimming_window_minutes [float]:       The smallest allowed time window in which to search for dimming.
-                                                                Default is 120.
+                                                                Default is 120 (2 hours).
         flare_index_range [range]                               The range of GOES flare indices to process. Default is range(0, 5052).
         output_path [str]:                                      Set to a path for saving the JEDI catalog table and processing
                                                                 summary plots. Default is '/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
@@ -68,6 +74,10 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
         generate_jedi_catalog(output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
                               verbose=True)
     """
+
+    # Force flare_index_range to be an array type so it can be indexed in later code
+    if isinstance(flare_index_range, int):
+        flare_index_range = np.array([flare_index_range])
 
     # Prepare the logger for verbose
     if verbose:
@@ -521,4 +531,10 @@ def generate_jedi_catalog(threshold_time_prior_flare_minutes=240.0,
 
 
 if __name__ == '__main__':
-    generate_jedi_catalog(verbose=True, flare_index_range=range(1, 11))
+    # Parallel processing method
+    #with mp.Pool(processes=7) as pool:
+    #    for events in range(0, 12, 7):
+            #generate_jedi_catalog_function_1_varying_input = partial(generate_jedi_catalog, verbose=True)
+    #        pool.map(generate_jedi_catalog, range(events, events+7))
+
+    generate_jedi_catalog(range(1, 1000))
