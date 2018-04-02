@@ -369,7 +369,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                     plt.close('all')
                     light_curve_fit, best_fit_gamma, best_fit_score = automatic_fit_light_curve(eve_line_event,
                                                                                                 gamma=np.array([5e-8]),
-                                                                                                plots_save_path='{0} Event {1} {2} '.format(fitting_path, flare_index, column),
+                                                                                                plots_save_path='{0}Event {1} {2} '.format(fitting_path, flare_index, column),
                                                                                                 verbose=verbose, logger=logger)
                     eve_lines_event[column] = light_curve_fit
                     jedi_row[column + ' Fitting Gamma'] = best_fit_gamma
@@ -414,7 +414,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
 
                 plt.close('all')
                 depth_percent, depth_time = determine_dimming_depth(eve_line_event,
-                                                                    plot_path_filename='{0} Event {1} {2} Depth.png'.format(depth_path, flare_index, column),
+                                                                    plot_path_filename='{0}Event {1} {2} Depth.png'.format(depth_path, flare_index, column),
                                                                     verbose=verbose, logger=logger)
 
                 jedi_row[column + ' Depth [%]'] = depth_percent
@@ -437,7 +437,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                     slope_min, slope_max, slope_mean = determine_dimming_slope(eve_line_event,
                                                                                earliest_allowed_time=slope_start_time,
                                                                                latest_allowed_time=slope_end_time,
-                                                                               plot_path_filename='{0} Event {1} {2} Slope.png'.format(slope_path, flare_index, column),
+                                                                               plot_path_filename='{0}Event {1} {2} Slope.png'.format(slope_path, flare_index, column),
                                                                                verbose=verbose, logger=logger)
 
                     jedi_row[column + ' Slope Min [%/s]'] = slope_min
@@ -455,7 +455,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                     plt.close('all')
                     duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(eve_line_event,
                                                                                                           earliest_allowed_time=slope_start_time,
-                                                                                                          plot_path_filename='{0} Event {1} {2} Duration.png'.format(duration_path, flare_index, column),
+                                                                                                          plot_path_filename='{0}Event {1} {2} Duration.png'.format(duration_path, flare_index, column),
                                                                                                           verbose=verbose, logger=logger)
 
                     jedi_row[column + ' Duration [s]'] = duration_seconds
@@ -514,7 +514,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                 summary_path = output_path + 'Summary Plots/'
                 if not os.path.exists(summary_path):
                     os.makedirs(summary_path)
-                summary_filename = '{0} Event {1} {2} Parameter Summary.png'.format(summary_path, flare_index, column)
+                summary_filename = '{0}Event {1} {2} Parameter Summary.png'.format(summary_path, flare_index, column)
                 plt.savefig(summary_filename)
                 if verbose:
                     logger.info("Summary plot saved to %s" % summary_filename)
@@ -537,4 +537,4 @@ if __name__ == '__main__':
             #generate_jedi_catalog_function_1_varying_input = partial(generate_jedi_catalog, verbose=True)
     #        pool.map(generate_jedi_catalog, range(events, events+7))
 
-    generate_jedi_catalog(range(1, 1000))
+    generate_jedi_catalog(range(8, 1000))
