@@ -139,8 +139,8 @@ def automatic_fit_light_curve(light_curve_df, gamma=np.logspace(-10, -5, num=20,
 
     if plots_save_path:
         plt.clf()
-        plt.errorbar(X.ravel(), y, yerr=uncertainty, color='black', fmt='o', label='Input light curve')
-        plt.plot(X.ravel(), y_fit, linewidth=6, label='Fit')
+        plt.errorbar(X.ravel(), y, yerr=uncertainty, color='black', fmt='o', label='Input light curve', zorder=1)
+        plt.plot(X.ravel(), y_fit, linewidth=6, label='Fit', zorder=2)
         plt.title("t$_0$ = " + datetimeindex_to_human(light_curve_df.index)[0])
         plt.xlabel('time [seconds since start]')
         plt.ylabel('irradiance [%]')
