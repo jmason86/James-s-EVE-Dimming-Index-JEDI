@@ -30,7 +30,7 @@ __contact__ = 'jmason86@gmail.com'
 
 def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                           threshold_time_prior_flare_minutes=480.0,
-                          dimming_window_relative_to_flare_minutes_left=0.0,
+                          dimming_window_relative_to_flare_minutes_left=-1.0,
                           dimming_window_relative_to_flare_minutes_right=1440.0,
                           threshold_minimum_dimming_window_minutes=120.0,
                           output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
@@ -143,7 +143,9 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
     [wavelengths_str.append('{0:1.1f}'.format(wavelength)) for wavelength in wavelengths]
     eve_lines = pd.DataFrame(irradiance, columns=wavelengths_str)
     eve_lines.index = pd.to_datetime(eve_readsav.iso.astype(str))
+    eve_lines.sort_index(inplace=True)
     eve_lines = eve_lines.drop_duplicates()
+
 
     # Get GOES flare events above C1 within date range corresponding to EVE data
     # flares = get_goes_flare_events(eve_lines.index[0], eve_lines.index[-1], verbose=verbose)  # TODO: The method in sunpy needs fixing, issue 2434
@@ -275,7 +277,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                 logger.info("Event {0} pre-flare determination complete.".format(flare_index))
 
             # Clip EVE data to dimming window
-            bracket_time_left = (goes_flare_events['peak_time'][flare_index] - (dimming_window_relative_to_flare_minutes_left * u.minute))
+            bracket_time_left = (goes_flare_events['peak_time'][flare_index] + (dimming_window_relative_to_flare_minutes_left * u.minute))
             next_flare_time = Time((goes_flare_events['peak_time'][flare_index + 1]).iso)
             user_choice_time = (goes_flare_events['peak_time'][flare_index] + (dimming_window_relative_to_flare_minutes_right * u.minute))
             bracket_time_right = min(next_flare_time, user_choice_time)
@@ -488,9 +490,6 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                                  ha='right', va='center', rotation=90, size=18, color='limegreen')
 
                 if not np.isnan(slope_mean):
-                    if pd.isnull(slope_start_time) or pd.isnull(slope_end_time):
-                        import pdb
-                        pdb.set_trace()
                     p = plt.plot(eve_line_event[slope_start_time:slope_end_time]['irradiance'], c='tomato')
 
                     inverse_str = '$^{-1}$'
