@@ -58,6 +58,13 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
             logger = JpmLogger(filename='light_curve_peak_match_subtract_log', path='/Users/jmason86/Desktop/')
         logger.info("Running on event with light curve start time of {0}.".format(light_curve_to_subtract_from_df.index[0]))
 
+    # Check that the two input light curves have the same length and return NaN if not
+    # This is to handle the (numerous) cases where MEGS-B cadence is < MEGS-A and vice versa
+    if len(light_curve_to_subtract_from_df) != len(light_curve_to_subtract_with_df):
+        if verbose:
+            logger.warning('Input light curves have different length, i.e. cadence. Must skip.')
+        return np.nan, np.nan, np.nan
+
     # Drop NaNs since peakutils can't handle them
     light_curve_to_subtract_from_df = light_curve_to_subtract_from_df.dropna()
     light_curve_to_subtract_with_df = light_curve_to_subtract_with_df.dropna()
@@ -90,10 +97,8 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
     if verbose:
         logger.info("Identifying peaks closest to initial guess in light curves.")
     peak_index_from = indices_from[closest(light_curve_to_subtract_from_df.index[indices_from], estimated_time_of_peak)]
-    if len(indices_with) == 0:
-        import pdb
-        pdb.set_trace()
     peak_index_with = indices_with[closest(light_curve_to_subtract_with_df.index[indices_with], estimated_time_of_peak)]
+    peak_time_from = light_curve_to_subtract_from_df.index[peak_index_from]
     index_shift = peak_index_from - peak_index_with
 
     # Compute how many seconds the time shift corresponds to
