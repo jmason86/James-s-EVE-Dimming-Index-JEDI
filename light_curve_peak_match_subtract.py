@@ -58,16 +58,16 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
             logger = JpmLogger(filename='light_curve_peak_match_subtract_log', path='/Users/jmason86/Desktop/')
         logger.info("Running on event with light curve start time of {0}.".format(light_curve_to_subtract_from_df.index[0]))
 
+    # Drop NaNs since peakutils can't handle them
+    light_curve_to_subtract_from_df = light_curve_to_subtract_from_df.dropna()
+    light_curve_to_subtract_with_df = light_curve_to_subtract_with_df.dropna()
+
     # Check that the two input light curves have the same length and return NaN if not
     # This is to handle the (numerous) cases where MEGS-B cadence is < MEGS-A and vice versa
     if len(light_curve_to_subtract_from_df) != len(light_curve_to_subtract_with_df):
         if verbose:
             logger.warning('Input light curves have different length, i.e. cadence. Must skip.')
         return np.nan, np.nan, np.nan
-
-    # Drop NaNs since peakutils can't handle them
-    light_curve_to_subtract_from_df = light_curve_to_subtract_from_df.dropna()
-    light_curve_to_subtract_with_df = light_curve_to_subtract_with_df.dropna()
 
     # Detrend and find the peaks that are ≥ 95% of the max irradiance within
     if verbose:
