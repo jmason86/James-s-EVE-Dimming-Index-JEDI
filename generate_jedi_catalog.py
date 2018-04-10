@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import astropy.units as u
 from astropy.time import Time
 import progressbar
+import gc
 import multiprocessing as mp
 
 # Custom modules
@@ -26,7 +27,6 @@ from determine_dimming_duration import determine_dimming_duration
 
 __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
-
 
 def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                           threshold_time_prior_flare_minutes=480.0,
@@ -64,7 +64,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
         verbose [bool]:                                         Set to log the processing messages to disk and console. Default is False.
 
     Outputs:
-        No direct return, but writes a (csv? sql table? hdf5?) to disk with the dimming paramerization results.
+        No direct return, but writes a csv to disk with the dimming paramerization results.
         Subroutines also optionally save processing plots to disk in output_path.
 
     Optional Outputs:
@@ -313,6 +313,9 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
             # (in place, don't care about absolute units from this point forward)
             eve_lines_event = (eve_lines_event - preflare_irradiance) / preflare_irradiance * 100.0
 
+            logger.info('initial')
+            logger.info(eve_lines_event.memory_usage().sum() / 1e6)
+
             if verbose:
                 logger.info("Event {0} irradiance converted from absolute to percent units.".format(flare_index))
 
@@ -338,6 +341,9 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                     eve_lines_event[ion_permutations[i]] = light_curve_corrected
                     jedi_row[ion_permutations[i] + ' Correction Time Shift [s]'] = seconds_shift
                     jedi_row[ion_permutations[i] + ' Correction Scale Factor'] = scale_factor
+
+                    logger.info('After peak match')
+                    logger.info(eve_lines_event.memory_usage().sum() / 1e6)
 
                     plt.close('all')
 
@@ -377,6 +383,9 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                     jedi_row[column + ' Fitting Gamma'] = best_fit_gamma
                     jedi_row[column + ' Fitting Score'] = best_fit_score
 
+                    logger.info('After fit')
+                    logger.info(eve_lines_event.memory_usage().sum() / 1e6)
+
                     if verbose:
                         logger.info('Event {0} {1} light curves fitted.'.format(flare_index, column))
                     progress_bar_fitting.update(i)
@@ -384,11 +393,11 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
             progress_bar_fitting.finish()
 
             # Save the dimming event data to disk for quicker restore
-            jedi_row.to_hdf(processed_jedi_non_params_filename, 'jedi_row')
-            eve_lines_event.to_hdf(processed_lines_filename, 'eve_lines_event')
+            #jedi_row.to_hdf(processed_jedi_non_params_filename, 'jedi_row')
+            #eve_lines_event.to_hdf(processed_lines_filename, 'eve_lines_event')
         else:
-            jedi_row = pd.read_hdf(processed_jedi_non_params_filename, 'jedi_row')
-            eve_lines_event = pd.read_hdf(processed_lines_filename, 'eve_lines_event')
+            #jedi_row = pd.read_hdf(processed_jedi_non_params_filename, 'jedi_row')
+            #eve_lines_event = pd.read_hdf(processed_lines_filename, 'eve_lines_event')
             if verbose:
                 logger.info('Loading files {0} and {1} rather than processing again.'.format(processed_jedi_non_params_filename, processed_lines_filename))
 
@@ -515,6 +524,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                     os.makedirs(summary_path)
                 summary_filename = '{0}Event {1} {2} Parameter Summary.png'.format(summary_path, flare_index, column)
                 plt.savefig(summary_filename)
+                plt.close('all')
                 if verbose:
                     logger.info("Summary plot saved to %s" % summary_filename)
 
@@ -522,6 +532,9 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
         jedi_row.to_csv(csv_filename, header=False, index=False, mode='a')
         if verbose:
             logger.info('Event {0} JEDI row written to {1}.'.format(flare_index, csv_filename))
+
+        # Garbage collection -- python should be doing this on it's own but just in case
+        gc.collect()
 
         # Update progress bar
         progress_bar.update(flare_index)
@@ -536,4 +549,4 @@ if __name__ == '__main__':
             #generate_jedi_catalog_function_1_varying_input = partial(generate_jedi_catalog, verbose=True)
     #        pool.map(generate_jedi_catalog, range(events, events+7))
 
-    generate_jedi_catalog(range(8, 1000))
+    generate_jedi_catalog(range(37, 45))
