@@ -13,6 +13,8 @@ from astropy.time import Time
 import progressbar
 import gc
 import multiprocessing as mp
+from functools import partial
+import tracemalloc
 
 # Custom modules
 from jpm_logger import JpmLogger
@@ -74,6 +76,10 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
         generate_jedi_catalog(output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
                               verbose=True)
     """
+
+    # Memory leak debugging
+    tracemalloc.start()
+    snapshots = [tracemalloc.take_snapshot()]
 
     # Force flare_index_range to be an array type so it can be indexed in later code
     if isinstance(flare_index_range, int):
@@ -227,6 +233,8 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
         if flare_index == 0:
             continue
 
+        print('Running on event {0}'.format(flare_index))
+
         # Reset jedi_row
         jedi_row[:] = np.nan
 
@@ -267,6 +275,13 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                 logger.info("This flare at {0} will use the pre-flare irradiance from flare at {1}."
                             .format(goes_flare_events['peak_time'][flare_index].iso,
                                     goes_flare_events['peak_time'][flare_index - 1].iso))
+
+            # Make sure there is a preflare_window_start defined. If not, user probably needs to start from an earlier event.
+            if 'preflare_window_start' not in locals():
+                print('ERROR: You need to start from an earlier event. Detected flare interrupt so need earlier pre-flare value.')
+                logger.error('ERROR: You need to start from an earlier event. Detected flare interrupt so need earlier pre-flare value.')
+                print('Moving to next event instead.')
+                continue
 
             jedi_row["Pre-Flare Start Time"] = preflare_window_start
             jedi_row["Pre-Flare End Time"] = preflare_window_end
@@ -313,9 +328,6 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
             # (in place, don't care about absolute units from this point forward)
             eve_lines_event = (eve_lines_event - preflare_irradiance) / preflare_irradiance * 100.0
 
-            logger.info('initial')
-            logger.info(eve_lines_event.memory_usage().sum() / 1e6)
-
             if verbose:
                 logger.info("Event {0} irradiance converted from absolute to percent units.".format(flare_index))
 
@@ -341,9 +353,6 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                     eve_lines_event[ion_permutations[i]] = light_curve_corrected
                     jedi_row[ion_permutations[i] + ' Correction Time Shift [s]'] = seconds_shift
                     jedi_row[ion_permutations[i] + ' Correction Scale Factor'] = scale_factor
-
-                    logger.info('After peak match')
-                    logger.info(eve_lines_event.memory_usage().sum() / 1e6)
 
                     plt.close('all')
 
@@ -383,8 +392,8 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                     jedi_row[column + ' Fitting Gamma'] = best_fit_gamma
                     jedi_row[column + ' Fitting Score'] = best_fit_score
 
-                    logger.info('After fit')
-                    logger.info(eve_lines_event.memory_usage().sum() / 1e6)
+                    # Memory leak debugging
+                    #collect_stats(snapshots)
 
                     if verbose:
                         logger.info('Event {0} {1} light curves fitted.'.format(flare_index, column))
@@ -394,10 +403,10 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
 
             # Save the dimming event data to disk for quicker restore
             #jedi_row.to_hdf(processed_jedi_non_params_filename, 'jedi_row')
-            #eve_lines_event.to_hdf(processed_lines_filename, 'eve_lines_event')
+            eve_lines_event.to_hdf(processed_lines_filename, 'eve_lines_event')
         else:
             #jedi_row = pd.read_hdf(processed_jedi_non_params_filename, 'jedi_row')
-            #eve_lines_event = pd.read_hdf(processed_lines_filename, 'eve_lines_event')
+            eve_lines_event = pd.read_hdf(processed_lines_filename, 'eve_lines_event')
             if verbose:
                 logger.info('Loading files {0} and {1} rather than processing again.'.format(processed_jedi_non_params_filename, processed_lines_filename))
 
@@ -542,11 +551,78 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
     progress_bar.finish()
 
 
+def merge_jedi_catalog_files(
+        file_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
+        verbose=False):
+    """Function for merging the .csv output files of generate_jedi_catalog()
+
+    Inputs:
+        None.
+
+    Optional Inputs:
+        file_path [str]: Set to a path for saving the JEDI catalog table.
+                         Default is '/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
+        verbose [bool]:  Set to log the processing messages to console. Default is False.
+
+    Outputs:
+        No direct return, but writes a csv to disk with the dimming paramerization results.
+
+    Optional Outputs:
+        None
+
+    Example:
+        generate_jedi_catalog(output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
+                              verbose=True)
+    """
+    # Create one sorted, clean dataframe from all of the csv files
+    list_dfs = []
+    for file in os.listdir(file_path):
+        if file.endswith(".csv") and "merged" not in file:
+            jedi_rows = pd.read_csv(os.path.join(file_path, file), index_col=None, header=0, low_memory=False)
+            list_dfs.append(jedi_rows)
+    jedi_catalog_df = pd.concat(list_dfs, ignore_index=True)
+    jedi_catalog_df.dropna(axis=0, how='all', inplace=True)
+    jedi_catalog_df.drop_duplicates(inplace=True)
+    jedi_catalog_df.sort_values(by=['Event #'], inplace=True)
+    jedi_catalog_df.reset_index(drop=True, inplace=True)
+    if verbose:
+        print("Read files, sorted, dropped empty and duplicate rows, and reset index.")
+
+    # Write the catalog to disk
+    csv_filename = file_path + 'jedi_merged_{0}.csv'.format(Time.now().iso)
+    jedi_catalog_df.to_csv(csv_filename, header=True, index=False, mode='w')
+    if verbose:
+        print("Wrote merged file to {0}".format(csv_filename))
+
+    return 1
+
+
+def collect_stats(snapshots):
+    snapshots.append(tracemalloc.take_snapshot())
+    if len(snapshots) > 1:
+        stats = snapshots[-1].compare_to(snapshots[-2], 'filename')
+
+        for stat in stats[:10]:
+            print("{} new KiB {} total KiB {} new {} total memory blocks: ".format(stat.size_diff / 1024,
+                                                                                    stat.size / 1024,
+                                                                                    stat.count_diff, stat.count))
+            for line in stat.traceback.format():
+                print(line)
+
+
 if __name__ == '__main__':
     # Parallel processing method
-    #with mp.Pool(processes=7) as pool:
-    #    for events in range(0, 12, 7):
-            #generate_jedi_catalog_function_1_varying_input = partial(generate_jedi_catalog, verbose=True)
-    #        pool.map(generate_jedi_catalog, range(events, events+7))
+    # with mp.Pool(processes=6) as pool:
+    #     for events in range(78, 148, 5):
+    #         generate_jedi_catalog_function_1_varying_input = partial(generate_jedi_catalog, verbose=True)
+    #         print('Should be running from {0} to {1}'.format(events, events + 5))
+    #         pool.map(generate_jedi_catalog, range(events, events + 5))
 
-    generate_jedi_catalog(range(37, 45))
+    # TESS events for Dave Webb
+    flare_indices = np.array([#30, 93, 142, 576, 589, 590, 673, 682,
+                              785, 810, 901, 954, 1477, 1487, 1535, 1552, 1588, 1589, 1617, 1968, 2025, 2128, 2143,
+                              2244, 3040, 3568, 3701])
+    generate_jedi_catalog(flare_indices)
+    
+    # Just run code over some range
+    #generate_jedi_catalog(range(700, 5000))
