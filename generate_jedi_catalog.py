@@ -4,7 +4,8 @@ import itertools
 from collections import OrderedDict
 import numpy as np
 import matplotlib as mpl
-mpl.use('macosx')
+#mpl.use('macosx') # For interactive plotting
+mpl.use('agg')
 from matplotlib import dates
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -14,7 +15,6 @@ import progressbar
 import gc
 import multiprocessing as mp
 from functools import partial
-import tracemalloc
 
 # Custom modules
 from jpm_logger import JpmLogger
@@ -35,7 +35,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                           dimming_window_relative_to_flare_minutes_left=-1.0,
                           dimming_window_relative_to_flare_minutes_right=1440.0,
                           threshold_minimum_dimming_window_minutes=120.0,
-                          output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
+                          output_path='~/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
                           verbose=True):
     """Wrapper code for creating James's Extreme Ultraviolet Variability Experiment (EVE) Dimming Index (JEDI) catalog.
 
@@ -62,7 +62,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                                                                 Default is 120 (2 hours).
         flare_index_range [range]                               The range of GOES flare indices to process. Default is range(0, 5052).
         output_path [str]:                                      Set to a path for saving the JEDI catalog table and processing
-                                                                summary plots. Default is '/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
+                                                                summary plots. Default is '~/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
         verbose [bool]:                                         Set to log the processing messages to disk and console. Default is False.
 
     Outputs:
@@ -73,13 +73,9 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
         None
 
     Example:
-        generate_jedi_catalog(output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
+        generate_jedi_catalog(output_path='~/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
                               verbose=True)
     """
-
-    # Memory leak debugging
-    tracemalloc.start()
-    snapshots = [tracemalloc.take_snapshot()]
 
     # Force flare_index_range to be an array type so it can be indexed in later code
     if isinstance(flare_index_range, int):
@@ -96,7 +92,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
     # Get EVE level 2 extracted emission lines data
     # TODO: Replace this shortcut method with the method I'm building into sunpy
     from scipy.io.idl import readsav
-    eve_readsav = readsav('/Users/jmason86/Dropbox/Research/Data/EVE/eve_lines_2010121-2014146 MEGS-A Mission Bare Bones.sav')
+    eve_readsav = readsav('~/Dropbox/Research/Data/EVE/eve_lines_2010121-2014146 MEGS-A Mission Bare Bones.sav')
     if verbose:
         logger.info('Loaded EVE data')
 
@@ -157,7 +153,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
     # flares = get_goes_flare_events(eve_lines.index[0], eve_lines.index[-1], verbose=verbose)  # TODO: The method in sunpy needs fixing, issue 2434
 
     # Load GOES events from IDL saveset instead of directly through sunpy
-    goes_flare_events = readsav('/Users/jmason86/Dropbox/Research/Data/GOES/events/GoesEventsC1MinMegsAEra.sav')
+    goes_flare_events = readsav('~/Dropbox/Research/Data/GOES/events/GoesEventsC1MinMegsAEra.sav')
     goes_flare_events['class'] = goes_flare_events['class'].astype(str)
     goes_flare_events['event_peak_time_human'] = goes_flare_events['event_peak_time_human'].astype(str)
     goes_flare_events['event_start_time_human'] = goes_flare_events['event_start_time_human'].astype(str)
@@ -392,9 +388,6 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                     jedi_row[column + ' Fitting Gamma'] = best_fit_gamma
                     jedi_row[column + ' Fitting Score'] = best_fit_score
 
-                    # Memory leak debugging
-                    #collect_stats(snapshots)
-
                     if verbose:
                         logger.info('Event {0} {1} light curves fitted.'.format(flare_index, column))
                     progress_bar_fitting.update(i)
@@ -552,7 +545,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
 
 
 def merge_jedi_catalog_files(
-        file_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
+        file_path='~/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
         verbose=False):
     """Function for merging the .csv output files of generate_jedi_catalog()
 
@@ -561,7 +554,7 @@ def merge_jedi_catalog_files(
 
     Optional Inputs:
         file_path [str]: Set to a path for saving the JEDI catalog table.
-                         Default is '/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
+                         Default is '~/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
         verbose [bool]:  Set to log the processing messages to console. Default is False.
 
     Outputs:
@@ -571,7 +564,7 @@ def merge_jedi_catalog_files(
         None
 
     Example:
-        generate_jedi_catalog(output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
+        generate_jedi_catalog(output_path='~/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
                               verbose=True)
     """
     # Create one sorted, clean dataframe from all of the csv files
@@ -597,19 +590,6 @@ def merge_jedi_catalog_files(
     return 1
 
 
-def collect_stats(snapshots):
-    snapshots.append(tracemalloc.take_snapshot())
-    if len(snapshots) > 1:
-        stats = snapshots[-1].compare_to(snapshots[-2], 'filename')
-
-        for stat in stats[:10]:
-            print("{} new KiB {} total KiB {} new {} total memory blocks: ".format(stat.size_diff / 1024,
-                                                                                    stat.size / 1024,
-                                                                                    stat.count_diff, stat.count))
-            for line in stat.traceback.format():
-                print(line)
-
-
 if __name__ == '__main__':
     # Parallel processing method
     # with mp.Pool(processes=6) as pool:
@@ -617,12 +597,6 @@ if __name__ == '__main__':
     #         generate_jedi_catalog_function_1_varying_input = partial(generate_jedi_catalog, verbose=True)
     #         print('Should be running from {0} to {1}'.format(events, events + 5))
     #         pool.map(generate_jedi_catalog, range(events, events + 5))
-
-    # TESS events for Dave Webb
-    flare_indices = np.array([#30, 93, 142, 576, 589, 590, 673, 682,
-                              785, 810, 901, 954, 1477, 1487, 1535, 1552, 1588, 1589, 1617, 1968, 2025, 2128, 2143,
-                              2244, 3040, 3568, 3701])
-    generate_jedi_catalog(flare_indices)
     
     # Just run code over some range
-    #generate_jedi_catalog(range(700, 5000))
+    generate_jedi_catalog(range(1270, 5000))
