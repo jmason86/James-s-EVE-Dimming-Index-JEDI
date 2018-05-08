@@ -85,10 +85,10 @@ def automatic_fit_light_curve(light_curve_df, gamma=np.logspace(-10, -5, num=20,
     shuffle_split = ShuffleSplit(n_splits=20, train_size=0.5, test_size=0.5, random_state=None)
 
     # Generate the validation curve -- test all them gammas!
-    # Parallelized to speed it up (n_jobs = # of parallel threads)
+    # Parallel with n_jobs has absolutely no impact on processing time
     train_score, val_score = validation_curve(jpm_svr(), X, y,
                                               'svr__gamma',
-                                              gamma, cv=shuffle_split, n_jobs=7, scoring=evs)
+                                              gamma, cv=shuffle_split, scoring=evs)
 
     if verbose:
         logger.info("Validation curve complete.")
