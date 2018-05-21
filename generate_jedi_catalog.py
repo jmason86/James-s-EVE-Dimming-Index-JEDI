@@ -11,8 +11,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import astropy.units as u
 from astropy.time import Time
-import progressbar
-import gc
+import time
+#import progressbar
 import multiprocessing as mp
 from functools import partial
 
@@ -35,7 +35,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                           dimming_window_relative_to_flare_minutes_left=-1.0,
                           dimming_window_relative_to_flare_minutes_right=1440.0,
                           threshold_minimum_dimming_window_minutes=120.0,
-                          output_path='~/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
+                          output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
                           verbose=True):
     """Wrapper code for creating James's Extreme Ultraviolet Variability Experiment (EVE) Dimming Index (JEDI) catalog.
 
@@ -62,7 +62,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                                                                 Default is 120 (2 hours).
         flare_index_range [range]                               The range of GOES flare indices to process. Default is range(0, 5052).
         output_path [str]:                                      Set to a path for saving the JEDI catalog table and processing
-                                                                summary plots. Default is '~/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
+                                                                summary plots. Default is '/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
         verbose [bool]:                                         Set to log the processing messages to disk and console. Default is False.
 
     Outputs:
@@ -73,7 +73,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
         None
 
     Example:
-        generate_jedi_catalog(output_path='~/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
+        generate_jedi_catalog(output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
                               verbose=True)
     """
 
@@ -92,7 +92,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
     # Get EVE level 2 extracted emission lines data
     # TODO: Replace this shortcut method with the method I'm building into sunpy
     from scipy.io.idl import readsav
-    eve_readsav = readsav('~/Dropbox/Research/Data/EVE/eve_lines_2010121-2014146 MEGS-A Mission Bare Bones.sav')
+    eve_readsav = readsav('/Users/jmason86/Dropbox/Research/Data/EVE/eve_lines_2010121-2014146 MEGS-A Mission Bare Bones.sav')
     if verbose:
         logger.info('Loaded EVE data')
 
@@ -153,7 +153,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
     # flares = get_goes_flare_events(eve_lines.index[0], eve_lines.index[-1], verbose=verbose)  # TODO: The method in sunpy needs fixing, issue 2434
 
     # Load GOES events from IDL saveset instead of directly through sunpy
-    goes_flare_events = readsav('~/Dropbox/Research/Data/GOES/events/GoesEventsC1MinMegsAEra.sav')
+    goes_flare_events = readsav('/Users/jmason86/Dropbox/Research/Data/GOES/events/GoesEventsC1MinMegsAEra.sav')
     goes_flare_events['class'] = goes_flare_events['class'].astype(str)
     goes_flare_events['event_peak_time_human'] = goes_flare_events['event_peak_time_human'].astype(str)
     goes_flare_events['event_start_time_human'] = goes_flare_events['event_start_time_human'].astype(str)
@@ -214,9 +214,9 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
         logger.info('Created JEDI row definition.')
 
     # Start a progress bar
-    widgets = [progressbar.Percentage(), progressbar.Bar(), progressbar.Timer(), ' ', progressbar.AdaptiveETA()]
-    progress_bar = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Flare Event Loop: ')] + widgets,
-                                           min_value=flare_index_range[0], max_value=flare_index_range[-1]).start()
+    #widgets = [progressbar.Percentage(), progressbar.Bar(), progressbar.Timer(), ' ', progressbar.AdaptiveETA()]
+    #progress_bar = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Flare event loop: ')] + widgets,
+    #                                       min_value=flare_index_range[0], max_value=flare_index_range[-1]).start()
 
     # Prepare a hold-over pre-flare irradiance value,
     # which will normally have one element for each of the 39 emission lines
@@ -224,6 +224,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
 
     # Start loop through all flares
     for flare_index in flare_index_range:
+        loop_time = time.time()
 
         # Skip event 0 to avoid problems with referring to earlier indices
         if flare_index == 0:
@@ -328,8 +329,10 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                 logger.info("Event {0} irradiance converted from absolute to percent units.".format(flare_index))
 
             # Do flare removal in the light curves and add the results to the DataFrame
-            progress_bar_correction = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Peak Match Subtract: ')] + widgets,
-                                                              max_value=len(ion_tuples)).start()
+            #progress_bar_correction = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Peak match subtract: ')] + widgets,
+            #                                                  max_value=len(ion_tuples)).start()
+            time_correction = time.time()
+
             for i in range(len(ion_tuples)):
                 light_curve_to_subtract_from_df = pd.DataFrame(eve_lines_event[ion_tuples[i][0]])
                 light_curve_to_subtract_from_df.columns = ['irradiance']
@@ -354,9 +357,10 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
 
                     if verbose:
                         logger.info('Event {0} flare removal correction complete'.format(flare_index))
-                    progress_bar_correction.update(i)
+                    #progress_bar_correction.update(i)
 
-            progress_bar_correction.finish()
+            #progress_bar_correction.finish()
+            print('Time to do peak match subtract [s]: {0}'.format(time.time() - time_correction))
 
             # TODO: Update calculate_eve_fe_line_precision to compute for all emission lines, not just selected
             uncertainty = np.ones(len(eve_lines_event)) * 0.002545
@@ -364,8 +368,10 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
             # TODO: Propagate uncertainty through light_curve_peak_match_subtract and store in eve_lines_event
 
             # Fit the light curves to reduce influence of noise on the parameterizations to come later
-            progress_bar_fitting = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Light curve fitting: ')] + widgets,
-                                                           max_value=len(eve_lines_event.columns)).start()
+            #progress_bar_fitting = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Light curve fitting: ')] + widgets,
+            #                                               max_value=len(eve_lines_event.columns)).start()
+            time_fitting = time.time()
+
             for i, column in enumerate(eve_lines_event):
                 if eve_lines_event[column].isnull().all().all():
                     if verbose:
@@ -390,15 +396,16 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
 
                     if verbose:
                         logger.info('Event {0} {1} light curves fitted.'.format(flare_index, column))
-                    progress_bar_fitting.update(i)
+                    #progress_bar_fitting.update(i)
 
-            progress_bar_fitting.finish()
+            #progress_bar_fitting.finish()
+            print('Time to do fitting [s]: {0}'.format(time.time() - time_fitting))
 
             # Save the dimming event data to disk for quicker restore
-            #jedi_row.to_hdf(processed_jedi_non_params_filename, 'jedi_row')
+            jedi_row.to_hdf(processed_jedi_non_params_filename, 'jedi_row')
             eve_lines_event.to_hdf(processed_lines_filename, 'eve_lines_event')
         else:
-            #jedi_row = pd.read_hdf(processed_jedi_non_params_filename, 'jedi_row')
+            jedi_row = pd.read_hdf(processed_jedi_non_params_filename, 'jedi_row')
             eve_lines_event = pd.read_hdf(processed_lines_filename, 'eve_lines_event')
             if verbose:
                 logger.info('Loading files {0} and {1} rather than processing again.'.format(processed_jedi_non_params_filename, processed_lines_filename))
@@ -535,17 +542,15 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
         if verbose:
             logger.info('Event {0} JEDI row written to {1}.'.format(flare_index, csv_filename))
 
-        # Garbage collection -- python should be doing this on it's own but just in case
-        gc.collect()
-
         # Update progress bar
-        progress_bar.update(flare_index)
+        #progress_bar.update(flare_index)
+        print('Total time for loop [s]: {0}'.format(time.time() - loop_time))
 
-    progress_bar.finish()
+    #progress_bar.finish()
 
 
 def merge_jedi_catalog_files(
-        file_path='~/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
+        file_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
         verbose=False):
     """Function for merging the .csv output files of generate_jedi_catalog()
 
@@ -554,7 +559,7 @@ def merge_jedi_catalog_files(
 
     Optional Inputs:
         file_path [str]: Set to a path for saving the JEDI catalog table.
-                         Default is '~/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
+                         Default is '/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
         verbose [bool]:  Set to log the processing messages to console. Default is False.
 
     Outputs:
@@ -564,7 +569,7 @@ def merge_jedi_catalog_files(
         None
 
     Example:
-        generate_jedi_catalog(output_path='~/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
+        generate_jedi_catalog(output_path='/Users/jmaosn86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
                               verbose=True)
     """
     # Create one sorted, clean dataframe from all of the csv files
@@ -599,4 +604,4 @@ if __name__ == '__main__':
     #         pool.map(generate_jedi_catalog, range(events, events + 5))
     
     # Just run code over some range
-    generate_jedi_catalog(range(1270, 5000))
+    generate_jedi_catalog(range(1, 5052))
