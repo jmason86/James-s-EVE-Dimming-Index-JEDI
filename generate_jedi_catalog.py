@@ -22,7 +22,7 @@ from jpm_number_printing import latex_float
 # from get_goes_flare_events import get_goes_flare_events  # TODO: Uncomment once sunpy method implemented
 from determine_preflare_irradiance import determine_preflare_irradiance
 from light_curve_peak_match_subtract import light_curve_peak_match_subtract
-from automatic_fit_light_curve import automatic_fit_light_curve
+from light_curve_fit import light_curve_fit
 from determine_dimming_depth import determine_dimming_depth
 from determine_dimming_slope import determine_dimming_slope
 from determine_dimming_duration import determine_dimming_duration
@@ -386,11 +386,11 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                         os.makedirs(fitting_path)
 
                     plt.close('all')
-                    light_curve_fit, best_fit_gamma, best_fit_score = automatic_fit_light_curve(eve_line_event,
-                                                                                                gamma=np.array([5e-8]),
-                                                                                                plots_save_path='{0}Event {1} {2} '.format(fitting_path, flare_index, column),
-                                                                                                verbose=verbose, logger=logger)
-                    eve_lines_event[column] = light_curve_fit
+                    light_curve_fit_df, best_fit_gamma, best_fit_score = light_curve_fit(eve_line_event,
+                                                                                      gamma=np.array([5e-8]),
+                                                                                      plots_save_path='{0}Event {1} {2} '.format(fitting_path, flare_index, column),
+                                                                                      verbose=verbose, logger=logger)
+                    eve_lines_event[column] = light_curve_fit_df
                     jedi_row[column + ' Fitting Gamma'] = best_fit_gamma
                     jedi_row[column + ' Fitting Score'] = best_fit_score
 

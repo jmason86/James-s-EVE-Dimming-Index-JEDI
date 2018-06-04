@@ -16,8 +16,8 @@ __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
 
 
-def automatic_fit_light_curve(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10), minimum_score=0.5,
-                              plots_save_path=None, verbose=False, logger=None):
+def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10), minimum_score=0.5,
+                    plots_save_path=None, verbose=False, logger=None):
     """Automatically fit the best support vector machine regression (SVR) model for the input light curve.
 
     Inputs:
@@ -48,7 +48,7 @@ def automatic_fit_light_curve(light_curve_df, gamma=np.logspace(-10, -5, num=20,
         None
 
     Example:
-        light_curve_fit, best_fit_gamma, best_fit_score = automatic_fit_light_curve(light_curve_df, verbose=True)
+        light_curve_fit_df, best_fit_gamma, best_fit_score = light_curve_fit(light_curve_df, verbose=True)
     """
 
     # Prepare the logger for verbose
