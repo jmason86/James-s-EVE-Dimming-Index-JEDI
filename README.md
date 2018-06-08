@@ -23,7 +23,7 @@ Additionally, an output option is to produce plots for each step in processing i
 The main code is the wrapper script, [generate_jedi_catalog](generate_jedi_catalog.py). That calls most of the other .py files in this repository in this order:
 1. [determine_preflare_irradiance](determine_preflare_irradiance.py)
 2. [light_curve_peak_match_subtract](light_curve_peak_match_subtract.py)
-3. [automatic_fit_light_curve](automatic_fit_light_curve.py)
+3. [light_curve_fit](light_curve_fit.py)
 4. [determine_dimming_depth](determine_dimming_depth.py)
 5. [determine_dimming_slope](determine_dimming_slope.py)
 6. [determine_dimming_duration](determine_dimming_duration.py)
@@ -35,7 +35,7 @@ Of course, you can call the functions in any of these files independently, but s
 * The files with an "explore" prefix are Jupyter notebooks used for some initial data exploration of the data relevant to this repository. 
 
 Below is a brief description of each file.
-* [automatic_fit_light_curve.py](automatic_fit_light_curve.py): Feed it a light curve and it will use [scikit-learn's Support Vector Machine Regression](http://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html) (SVR) to fit the light curve and find the best fit using a validation curve (and optionally plot that curve), then (optionally plot and) return that best fit. If the best fit is too crappy (see ```minimum_score``` optional input), it will return ```np.nan```. 
+* [light_curve_fit.py](light_curve_fit.py): Feed it a light curve and it will use [scikit-learn's Support Vector Machine Regression](http://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html) (SVR) to fit the light curve and find the best fit using a validation curve (and optionally plot that curve), then (optionally plot and) return that best fit. If the best fit is too crappy (see ```minimum_score``` optional input), it will return ```np.nan```. 
 * [calculate_eve_fe_line_precision.py](calculate_eve_fe_line_precision.py): Compute precision for each of the iron light curves. Ultimately this will be expanded to all 39 light curves and it is planned to be used in the future to kick off uncertainty propagation through the whole JEDI pipeline. 
 * [determine_dimming_depth.py](determine_dimming_depth.py): Feed it a light curve (preferably a smooth, fitted light curve) and it will find the biggest dimming depth and it's time. It'll return ```np.nan``` if none is found. 
 * [determine_dimming_duration.py](determine_dimming_duration.py): Feed it a light curve (preferably a smooth, fitted light curve) and it will find the duration of dimming (where the curve drops below 0 and rises above it again, and it will return those two times as well). It'll return ```np.nan``` if it fails. 
