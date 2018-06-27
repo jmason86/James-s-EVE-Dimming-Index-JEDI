@@ -297,7 +297,7 @@ def multiprocess_preflare_irradiance(preflare_indices, nworkers):
     return preflare_irradiances, preflare_windows_start, preflare_windows_end
 
 
-def clip_eve_data_to_dimming_window(jedi_df, flare_index):
+def clip_eve_data_to_dimming_window(flare_index):
 
     flare_interrupt = False
 
@@ -314,11 +314,13 @@ def clip_eve_data_to_dimming_window(jedi_df, flare_index):
             flare_settings.logger.info('Flare interrupt for event at {0} by flare at {1}'.format(flare_settings.goes_flare_events['peak_time'][flare_index].iso, next_flare_time))
 
     # Write flare_interrupt to JEDI row
-    jedi_df.loc[:, 'Flare Interrupt'] = flare_interrupt
+    flare_settings.jedi_df.at[flare_index, 'Flare Interrupt'] = flare_interrupt
 
     if ((bracket_time_right - bracket_time_left).sec / 60.0) < flare_settings.threshold_minimum_dimming_window_minutes:
         # Leave all dimming parameters as NaN and write this null result to the CSV on disk
-        jedi_df.to_csv(flare_settings.csv_filename, header=False, index=False, mode='a')
+
+        # TODO: TO BE REVIEWED IF USING jedi_df as a ~5k x 24k dataframe!!!!!
+        flare_settings.jedi_df.to_csv(flare_settings.csv_filename, header=False, index=False, mode='a')
 
         # Log message
         if flare_settings.verbose:

@@ -24,12 +24,9 @@ flare_settings.verbose = True
 flare_settings.logger_filename = 'generate_jedi_catalog'
 
 flare_settings.init()
+flare_settings.make_jedi_df()
 
 wavelengths = flare_settings.eve_lines.columns
-
-
-ion_tuples = list(itertools.permutations(flare_settings.eve_lines.columns.values, 2))
-ion_permutations = pd.Index([' by '.join(ion_tuples[i]) for i in range(len(ion_tuples))])
 
 if flare_settings.verbose:
     flare_settings.logger.info('Created JEDI row definition.')
@@ -71,11 +68,11 @@ for flare_index in flare_index_range:
     processed_jedi_non_params_filename = flare_settings.output_path + 'Processed Pre-Parameterization Data/Event {0} Pre-Parameterization.h5'.format(flare_index)
     processed_lines_filename = flare_settings.output_path + 'Processed Lines Data/Event {0} Lines.h5'.format(flare_index)
 
-    # Fill the GOES flare information into the dataframe at all wavelengths
-    flare_settings.jedi_df.loc[:, 'Event #'] = flare_index
-    flare_settings.jedi_df.loc[:, 'GOES Flare Start Time'] = flare_settings.goes_flare_events['start_time'][flare_index].iso
-    flare_settings.jedi_df.loc[:, 'GOES Flare Peak Time'] = flare_settings.goes_flare_events['peak_time'][flare_index].iso
-    flare_settings.jedi_df.loc[:, 'GOES Flare Class'] = flare_settings.goes_flare_events['class'][flare_index]
+    # Fill the GOES flare information into the dataframe at all wavelength
+
+    flare_settings.jedi_df.at[flare_index, 'GOES Flare Start Time'] = flare_settings.goes_flare_events['start_time'][flare_index].iso
+    flare_settings.jedi_df.at[flare_index, 'GOES Flare Peak Time'] = flare_settings.goes_flare_events['peak_time'][flare_index].iso
+    flare_settings.jedi_df.at[flare_index, 'GOES Flare Class'] = flare_settings.goes_flare_events['class'][flare_index]
 
     if verbose:
         flare_settings.logger.info("Event {0} GOES flare details stored to JEDI row.".format(flare_index))
@@ -83,14 +80,16 @@ for flare_index in flare_index_range:
     if not os.path.isfile(processed_lines_filename) or not os.path.isfile(processed_jedi_non_params_filename):
 
         # Map current event to preflare data at all wavelengths.
-        flare_settings.jedi_df.loc[:, 'Pre-Flare Start Time'] = preflare_df['window start'][preflare_map_idx[flare_index_rel]]
-        flare_settings.jedi_df.loc[:, 'Pre-Flare End Time'] = preflare_df['window end'][preflare_map_idx[flare_index_rel]]
-        flare_settings.jedi_df.loc[:, 'Pre-Flare Irradiance [W/m2]'] = preflare_df.iloc[preflare_map_idx[flare_index_rel], 2:]
+        flare_settings.jedi_df.at[flare_index, 'Pre-Flare Start Time'] = preflare_df['window start'][preflare_map_idx[flare_index_rel]]
+        flare_settings.jedi_df.at[flare_index, 'Pre-Flare End Time'] = preflare_df['window end'][preflare_map_idx[flare_index_rel]]
+
+        preflare_irradiance_cols = [col for col in flare_settings.jedi_df.columns if 'Pre-Flare Irradiance' in col]
+        flare_settings.jedi_df.at[flare_index, preflare_irradiance_cols] = preflare_df.iloc[preflare_map_idx[flare_index_rel], 2:]
+
         if verbose:
             flare_settings.logger.info("Event {0} pre-flare determination complete.".format(flare_index))
 
-        # TODO Raphael: Change below to use jedi_df imported from flare_settings within the function itself
-        eve_lines_event = eve_jedi.clip_eve_data_to_dimming_window(flare_settings.jedi_df, flare_index)
+        eve_lines_event = eve_jedi.clip_eve_data_to_dimming_window(flare_index)
         if eve_lines_event is False:
             continue
 

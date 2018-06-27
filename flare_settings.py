@@ -76,11 +76,11 @@ def make_jedi_df():
     jedi_df = pd.DataFrame(
         OrderedDict((
             ('Event #', pd.Series(np.arange(nevents))),
-            ('GOES Flare Start Time', np.nan),
-            ('GOES Flare Peak Time', np.nan),
-            ('GOES Flare Class', np.nan),
-            ('Pre-Flare Start Time', np.nan),
-            ('Pre-Flare End Time', np.nan),
+            ('GOES Flare Start Time', ''),
+            ('GOES Flare Peak Time', ''),
+            ('GOES Flare Class', ''),
+            ('Pre-Flare Start Time', ''),
+            ('Pre-Flare End Time', ''),
             ('Flare Interrupt', np.nan)
         ))
     )
@@ -124,7 +124,8 @@ def make_jedi_df():
     jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Fitting Gamma'))
     jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Fitting Score'))
 
-
+    # See discussion on how to populate this efficiently at given index / columns:
+    # https://stackoverflow.com/questions/13842088/set-value-for-particular-cell-in-pandas-dataframe-using-index
 
 
 
