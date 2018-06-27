@@ -9,6 +9,7 @@ import time
 import flare_settings
 import matplotlib as mpl
 mpl.use('agg')
+from collections import OrderedDict
 
 __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
@@ -46,12 +47,16 @@ tmask = all_minutes_since_last_flare > flare_settings.threshold_time_prior_flare
 # flare_index_range = range(0, len(all_minutes_since_last_flare))
 # TODO: parallelization will work if we create series of ranges where tmask[current_range[0]] = True
 # <-> minutes_since_last_flare > flare_settings.threshold_time_prior_flare_minutes
+
+# Map all flare indices to their pre-flare event index
 preflare_map_idx = eve_jedi.map_true_indices2(tmask, range(0, tmask.size))
 
 flare_index_range = range(1, 4)
 
 verbose = flare_settings.verbose
 # Start loop through all flares
+
+
 for flare_index in flare_index_range:
 
     # Flare index relative to the preflare index map
@@ -62,19 +67,15 @@ for flare_index in flare_index_range:
 
     print('Running on event {0}'.format(flare_index))
 
-    # Reset jedi_row
-    # Create jedi DataFrame for current event, initialized/filled with NaN. Damn... I love Naan. I'm hungry now...
-    jedi_df = pd.DataFrame(np.nan, index=wavelengths, columns=flare_settings.jedi_columns)
-
     # If haven't already done all pre-parameterization processing
     processed_jedi_non_params_filename = flare_settings.output_path + 'Processed Pre-Parameterization Data/Event {0} Pre-Parameterization.h5'.format(flare_index)
     processed_lines_filename = flare_settings.output_path + 'Processed Lines Data/Event {0} Lines.h5'.format(flare_index)
 
     # Fill the GOES flare information into the dataframe at all wavelengths
-    jedi_df.loc[:, 'Event #'] = flare_index
-    jedi_df.loc[:, 'GOES Flare Start Time'] = flare_settings.goes_flare_events['start_time'][flare_index].iso
-    jedi_df.loc[:, 'GOES Flare Peak Time'] = flare_settings.goes_flare_events['peak_time'][flare_index].iso
-    jedi_df.loc[:, 'GOES Flare Class'] = flare_settings.goes_flare_events['class'][flare_index]
+    flare_settings.jedi_df.loc[:, 'Event #'] = flare_index
+    flare_settings.jedi_df.loc[:, 'GOES Flare Start Time'] = flare_settings.goes_flare_events['start_time'][flare_index].iso
+    flare_settings.jedi_df.loc[:, 'GOES Flare Peak Time'] = flare_settings.goes_flare_events['peak_time'][flare_index].iso
+    flare_settings.jedi_df.loc[:, 'GOES Flare Class'] = flare_settings.goes_flare_events['class'][flare_index]
 
     if verbose:
         flare_settings.logger.info("Event {0} GOES flare details stored to JEDI row.".format(flare_index))
@@ -82,13 +83,14 @@ for flare_index in flare_index_range:
     if not os.path.isfile(processed_lines_filename) or not os.path.isfile(processed_jedi_non_params_filename):
 
         # Map current event to preflare data at all wavelengths.
-        jedi_df.loc[:, 'Pre-Flare Start Time'] = preflare_df['window start'][preflare_map_idx[flare_index_rel]]
-        jedi_df.loc[:, 'Pre-Flare End Time'] = preflare_df['window end'][preflare_map_idx[flare_index_rel]]
-        jedi_df.loc[:, 'Pre-Flare Irradiance [W/m2]'] = preflare_df.iloc[preflare_map_idx[flare_index_rel], 2:]
+        flare_settings.jedi_df.loc[:, 'Pre-Flare Start Time'] = preflare_df['window start'][preflare_map_idx[flare_index_rel]]
+        flare_settings.jedi_df.loc[:, 'Pre-Flare End Time'] = preflare_df['window end'][preflare_map_idx[flare_index_rel]]
+        flare_settings.jedi_df.loc[:, 'Pre-Flare Irradiance [W/m2]'] = preflare_df.iloc[preflare_map_idx[flare_index_rel], 2:]
         if verbose:
             flare_settings.logger.info("Event {0} pre-flare determination complete.".format(flare_index))
 
-        eve_lines_event = eve_jedi.clip_eve_data_to_dimming_window(jedi_df, flare_index)
+        # TODO Raphael: Change below to use jedi_df imported from flare_settings within the function itself
+        eve_lines_event = eve_jedi.clip_eve_data_to_dimming_window(flare_settings.jedi_df, flare_index)
         if eve_lines_event is False:
             continue
 

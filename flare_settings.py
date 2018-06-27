@@ -4,6 +4,12 @@ from astropy.time import Time
 from scipy.io.idl import readsav
 import numpy as np
 import pandas as pd
+from collections import OrderedDict
+import itertools
+
+# For sharing variable across modules:
+# See https://stackoverflow.com/questions/13034496/using-global-variables-between-files
+# and https://docs.python.org/2/faq/programming.html#how-do-i-share-global-variables-across-modules
 
 
 eve_data_path = ''
@@ -15,7 +21,7 @@ threshold_time_prior_flare_minutes = 480.0
 dimming_window_relative_to_flare_minutes_left = -1.0
 dimming_window_relative_to_flare_minutes_right = 1440.0
 threshold_minimum_dimming_window_minutes = 120.0
-
+nevents = 5052
 
 n_jobs = 1
 verbose = True
@@ -25,52 +31,13 @@ goes_flare_events = None
 logger = None
 csv_filename = None
 preflare_hdf_filename = None
-
-jedi_columns = ['Event #',
-                'GOES Flare Start Time',
-                'GOES Flare Peak Time',
-                'GOES Flare Class',
-                'Pre-Flare Start Time',
-                'Pre-Flare End Time',
-                'Flare Interrupt',
-                'Pre-Flare Irradiance [W/m2]',
-                'Slope Start Time',
-                'Slope End Time',
-                'Slope Min [%/s]',
-                'Slope Max [%/s]',
-                'Slope Mean [%/s]',
-                'Slope Uncertainty [%/s]',
-                'Depth Time',
-                'Depth [%]',
-                'Depth Uncertainty [%]',
-                'Duration Start Time',
-                'Duration End Time',
-                'Duration [s]',
-                'Fitting Gamma',
-                'Fitting Score',
-                'Slope Start Time',
-                'Slope End Time',
-                'Slope Min [%/s]',
-                'Slope Max [%/s]',
-                'Slope Mean [%/s]',
-                'Slope Uncertainty [%/s]',
-                'Depth Time',
-                'Depth [%]',
-                'Depth Uncertainty [%]',
-                'Duration Start Time',
-                'Duration End Time',
-                'Duration [s]',
-                'Correction Time Shift [s]',
-                'Correction Scale Factor',
-                'Fitting Gamma',
-                'Fitting Score']
-
+jedi_df = None
 
 def init():
 
     global eve_lines, goes_flare_events, logger, csv_filename, preflare_hdf_filename
 
-    csv_filename = output_path + 'jedi_{0}.csv'.format(Time.now().iso)
+    #csv_filename = output_path + 'jedi_{0}.csv'.format(Time.now().iso)
     preflare_hdf_filename = os.path.join(output_path, 'preflare_df.hdf5')
 
     logger = JpmLogger(filename=logger_filename, path=output_path, console=False)
@@ -100,6 +67,63 @@ def init():
     goes_flare_events['peak_time'] = Time(goes_flare_events['event_peak_time_jd'], format='jd', scale='utc')
     goes_flare_events['start_time'] = Time(goes_flare_events['event_start_time_jd'], format='jd', scale='utc')
     #t = pd.to_datetime(goes_flare_events['event_start_time_jd'], unit='D', origin='julian')
+
+
+def make_jedi_df():
+
+    global jedi_df
+
+    jedi_df = pd.DataFrame(
+        OrderedDict((
+            ('Event #', pd.Series(np.arange(nevents))),
+            ('GOES Flare Start Time', np.nan),
+            ('GOES Flare Peak Time', np.nan),
+            ('GOES Flare Class', np.nan),
+            ('Pre-Flare Start Time', np.nan),
+            ('Pre-Flare End Time', np.nan),
+            ('Flare Interrupt', np.nan)
+        ))
+    )
+
+    # Define the combination of columns of the JEDI catalog
+    ion_tuples = list(itertools.permutations(eve_lines.columns.values, 2))
+    ion_permutations = pd.Index([' by '.join(ion_tuples[i]) for i in range(len(ion_tuples))])
+
+    jedi_df.set_index('Event #', inplace=True)
+    jedi_df = jedi_df.join(pd.DataFrame(columns=eve_lines.columns + ' Pre-Flare Irradiance [W/m2]'))
+
+    jedi_df = jedi_df.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Start Time'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=eve_lines.columns + ' Slope End Time'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Min [%/s]'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Max [%/s]'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Mean [%/s]'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Uncertainty [%/s]'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=eve_lines.columns + ' Depth Time'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=eve_lines.columns + ' Depth [%]'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=eve_lines.columns + ' Depth Uncertainty [%]'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=eve_lines.columns + ' Duration Start Time'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=eve_lines.columns + ' Duration End Time'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=eve_lines.columns + ' Duration [s]'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=eve_lines.columns + ' Fitting Gamma'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=eve_lines.columns + ' Fitting Score'))
+
+    jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Slope Start Time'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Slope End Time'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Slope Min [%/s]'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Slope Max [%/s]'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Slope Mean [%/s]'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Slope Uncertainty [%/s]'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Depth Time'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Depth [%]'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Depth Uncertainty [%]'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Duration Start Time'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Duration End Time'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Duration [s]'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Correction Time Shift [s]'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Correction Scale Factor'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Fitting Gamma'))
+    jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Fitting Score'))
+
 
 
 
