@@ -23,6 +23,7 @@ from determine_dimming_slope import determine_dimming_slope
 from determine_dimming_duration import determine_dimming_duration
 
 import flare_settings
+# JPM Tests commit
 
 # class FlareSettings:
 #     # For passing an instance as global.
