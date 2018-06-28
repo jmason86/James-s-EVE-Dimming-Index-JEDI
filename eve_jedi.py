@@ -22,45 +22,7 @@ from determine_dimming_depth import determine_dimming_depth
 from determine_dimming_slope import determine_dimming_slope
 from determine_dimming_duration import determine_dimming_duration
 
-import flare_settings
-# JPM Tests commit
-
-# class FlareSettings:
-#     # For passing an instance as global.
-#     # See https://stackoverflow.com/questions/13034496/using-global-variables-between-files
-#     # and https://docs.python.org/2/faq/programming.html#how-do-i-share-global-variables-across-modules
-#     def __init__(self, eve_data_path, goes_data_path, output_path,
-#                  threshold_time_prior_flare_minutes=480.0,
-#                  dimming_window_relative_to_flare_minutes_left=-1.0,
-#                  dimming_window_relative_to_flare_minutes_right=1440.0,
-#                  threshold_minimum_dimming_window_minutes=120.0,
-#                  verbose=True):
-#
-#         self.eve_data_path = eve_data_path
-#         self.goes_data_path = goes_data_path
-#         self.output_path = output_path
-#         self.threshold_time_prior_flare_minutes = threshold_time_prior_flare_minutes
-#         self.dimming_window_relative_to_flare_minutes_left = dimming_window_relative_to_flare_minutes_left
-#         self.dimming_window_relative_to_flare_minutes_right = dimming_window_relative_to_flare_minutes_right
-#         self.threshold_minimum_dimming_window_minutes = threshold_minimum_dimming_window_minutes
-#         self.verbose = verbose
-#
-#         self.logger = JpmLogger(filename='generate_jedi_catalog', path=output_path, console=False)
-#         self.logger.info("Starting JEDI processing pipeline.")
-#         #self.logger.info("Processing events {0} - {1}".format(flare_index_range[0], flare_index_range[-1]))
-#
-#         self.csv_filename = output_path + 'jedi_{0}.csv'.format(Time.now().iso)
-#         self.n_jobs = 1
-#
-#         self.eve_lines, self.goes_flare_events = load_eve_goes(self.eve_data_path, self.goes_data_path)
-#
-#         if verbose:
-#             self.logger.info('Loaded GOES flare events.')
-
-
-# def init(eve_data_path, goes_data_path, output_path, verbose=False):
-#     global flare_settings
-#     flare_settings = FlareSettings(eve_data_path, goes_data_path, output_path, verbose=verbose)
+import jedi_config
 
 
 def merge_jedi_catalog_files(
@@ -258,9 +220,9 @@ def loop_preflare_irradiance(flare_index):
 
     print('Processing event at flare_index = %d' % flare_index)
     # Clip EVE data from threshold_time_prior_flare_minutes prior to flare up to peak flare time
-    preflare_window_start = (flare_settings.goes_flare_events['peak_time'][flare_index] - (flare_settings.threshold_time_prior_flare_minutes * u.minute)).iso
-    preflare_window_end = (flare_settings.goes_flare_events['peak_time'][flare_index]).iso
-    eve_lines_preflare_time = flare_settings.eve_lines[preflare_window_start:preflare_window_end]
+    preflare_window_start = (jedi_config.goes_flare_events['peak_time'][flare_index] - (jedi_config.threshold_time_prior_flare_minutes * u.minute)).iso
+    preflare_window_end = (jedi_config.goes_flare_events['peak_time'][flare_index]).iso
+    eve_lines_preflare_time = jedi_config.eve_lines[preflare_window_start:preflare_window_end]
 
     # Loop through the emission lines and get pre-flare irradiance for each
     preflare_irradiance = []
@@ -270,10 +232,10 @@ def loop_preflare_irradiance(flare_index):
         eve_line_preflare_time.columns = ['irradiance']
 
         preflare_temp = determine_preflare_irradiance(eve_line_preflare_time,
-                                                      pd.Timestamp(flare_settings.goes_flare_events['start_time'][flare_index].iso),
-                                                      plot_path_filename=os.path.join(flare_settings.output_path, 'Preflare_Determination', 'Event_%d_%s.png' % (flare_index, column)),
-                                                      verbose=flare_settings.verbose,
-                                                      logger=flare_settings.logger)
+                                                      pd.Timestamp(jedi_config.goes_flare_events['start_time'][flare_index].iso),
+                                                      plot_path_filename=os.path.join(jedi_config.output_path, 'Preflare_Determination', 'Event_%d_%s.png' % (flare_index, column)),
+                                                      verbose=jedi_config.verbose,
+                                                      logger=jedi_config.logger)
 
         preflare_irradiance.append(preflare_temp)
 
@@ -303,45 +265,45 @@ def clip_eve_data_to_dimming_window(flare_index):
     flare_interrupt = False
 
     # Clip EVE data to dimming window
-    bracket_time_left = (flare_settings.goes_flare_events['peak_time'][flare_index] + (flare_settings.dimming_window_relative_to_flare_minutes_left * u.minute))
-    next_flare_time = Time((flare_settings.goes_flare_events['peak_time'][flare_index + 1]).iso)
-    user_choice_time = (flare_settings.goes_flare_events['peak_time'][flare_index] + (flare_settings.dimming_window_relative_to_flare_minutes_right * u.minute))
+    bracket_time_left = (jedi_config.goes_flare_events['peak_time'][flare_index] + (jedi_config.dimming_window_relative_to_flare_minutes_left * u.minute))
+    next_flare_time = Time((jedi_config.goes_flare_events['peak_time'][flare_index + 1]).iso)
+    user_choice_time = (jedi_config.goes_flare_events['peak_time'][flare_index] + (jedi_config.dimming_window_relative_to_flare_minutes_right * u.minute))
     bracket_time_right = min(next_flare_time, user_choice_time)
 
     # If flare is shortening the window, set the flare_interrupt flag
     if bracket_time_right == next_flare_time:
         flare_interrupt = True
-        if flare_settings.verbose:
-            flare_settings.logger.info('Flare interrupt for event at {0} by flare at {1}'.format(flare_settings.goes_flare_events['peak_time'][flare_index].iso, next_flare_time))
+        if jedi_config.verbose:
+            jedi_config.logger.info('Flare interrupt for event at {0} by flare at {1}'.format(jedi_config.goes_flare_events['peak_time'][flare_index].iso, next_flare_time))
 
     # Write flare_interrupt to JEDI row
-    flare_settings.jedi_df.at[flare_index, 'Flare Interrupt'] = flare_interrupt
+    jedi_config.jedi_df.at[flare_index, 'Flare Interrupt'] = flare_interrupt
 
-    if ((bracket_time_right - bracket_time_left).sec / 60.0) < flare_settings.threshold_minimum_dimming_window_minutes:
+    if ((bracket_time_right - bracket_time_left).sec / 60.0) < jedi_config.threshold_minimum_dimming_window_minutes:
         # Leave all dimming parameters as NaN and write this null result to the CSV on disk
 
         # TODO: TO BE REVIEWED IF USING jedi_df as a ~5k x 24k dataframe!!!!!
-        flare_settings.jedi_df.to_csv(flare_settings.csv_filename, header=False, index=False, mode='a')
+        jedi_config.jedi_df.to_csv(jedi_config.csv_filename, header=False, index=False, mode='a')
 
         # Log message
-        if flare_settings.verbose:
-            flare_settings.logger.info(
+        if jedi_config.verbose:
+            jedi_config.logger.info(
                 'The dimming window duration of {0} minutes is shorter than the minimum threshold of {1} minutes. Skipping this event ({2})'
                     .format(((bracket_time_right - bracket_time_left).sec / 60.0),
-                            flare_settings.threshold_minimum_dimming_window_minutes,
-                            flare_settings.goes_flare_events['peak_time'][flare_index]))
+                            jedi_config.threshold_minimum_dimming_window_minutes,
+                            jedi_config.goes_flare_events['peak_time'][flare_index]))
 
         eve_lines_event = False
 
     else:
-        eve_lines_event = flare_settings.eve_lines[bracket_time_left.iso:bracket_time_right.iso]
-        if flare_settings.verbose:
-            flare_settings.logger.info("Event {0} EVE data clipped to dimming window.".format(flare_index))
+        eve_lines_event = jedi_config.eve_lines[bracket_time_left.iso:bracket_time_right.iso]
+        if jedi_config.verbose:
+            jedi_config.logger.info("Event {0} EVE data clipped to dimming window.".format(flare_index))
 
     return eve_lines_event
 
 
-def peak_match_subtract(flare_settings, eve_lines_event, jedi_row, flare_index, ion_tuples, ion_permutations):
+def peak_match_subtract(jedi_config, eve_lines_event, jedi_row, flare_index, ion_tuples, ion_permutations):
 
     for i in range(len(ion_tuples)):
         light_curve_to_subtract_from_df = pd.DataFrame(eve_lines_event[ion_tuples[i][0]])
@@ -350,8 +312,8 @@ def peak_match_subtract(flare_settings, eve_lines_event, jedi_row, flare_index, 
         light_curve_to_subtract_with_df.columns = ['irradiance']
 
         if (light_curve_to_subtract_from_df.isnull().all().all()) or (light_curve_to_subtract_with_df.isnull().all().all()):
-            if flare_settings.verbose:
-                flare_settings.logger.info(
+            if jedi_config.verbose:
+                jedi_config.logger.info(
                     'Event {0} {1} correction skipped because all irradiances are NaN.'.format(flare_index,
                                                                                                ion_permutations[
                                                                                                    i]))
@@ -359,10 +321,10 @@ def peak_match_subtract(flare_settings, eve_lines_event, jedi_row, flare_index, 
             light_curve_corrected, seconds_shift, scale_factor = light_curve_peak_match_subtract(
                 light_curve_to_subtract_from_df,
                 light_curve_to_subtract_with_df,
-                pd.Timestamp((flare_settings.goes_flare_events['peak_time'][flare_index]).iso),
-                plot_path_filename=flare_settings.output_path + 'Peak Subtractions/Event {0} {1}.png'.format(flare_index,
+                pd.Timestamp((jedi_config.goes_flare_events['peak_time'][flare_index]).iso),
+                plot_path_filename=jedi_config.output_path + 'Peak Subtractions/Event {0} {1}.png'.format(flare_index,
                                                                                               ion_permutations[i]),
-                verbose=flare_settings.verbose, logger=flare_settings.logger)
+                verbose=jedi_config.verbose, logger=jedi_config.logger)
 
             eve_lines_event[ion_permutations[i]] = light_curve_corrected
             jedi_row[ion_permutations[i] + ' Correction Time Shift [s]'] = seconds_shift
@@ -370,23 +332,23 @@ def peak_match_subtract(flare_settings, eve_lines_event, jedi_row, flare_index, 
 
             plt.close('all')
 
-            if flare_settings.verbose:
-                flare_settings.logger.info('Event {0} flare removal correction complete'.format(flare_index))
+            if jedi_config.verbose:
+                jedi_config.logger.info('Event {0} flare removal correction complete'.format(flare_index))
 
 
-def light_curve_fitting(flare_settings, eve_lines_event, jedi_row, flare_index, uncertainty):
+def light_curve_fitting(jedi_config, eve_lines_event, jedi_row, flare_index, uncertainty):
 
     for i, column in enumerate(eve_lines_event):
         if eve_lines_event[column].isnull().all().all():
-            if flare_settings.verbose:
-                flare_settings.logger.info(
+            if jedi_config.verbose:
+                jedi_config.logger.info(
                     'Event {0} {1} fitting skipped because all irradiances are NaN.'.format(flare_index, column))
         else:
             eve_line_event = pd.DataFrame(eve_lines_event[column])
             eve_line_event.columns = ['irradiance']
             eve_line_event['uncertainty'] = uncertainty
 
-            fitting_path = flare_settings.output_path + 'Fitting/'
+            fitting_path = jedi_config.output_path + 'Fitting/'
             if not os.path.exists(fitting_path):
                 os.makedirs(fitting_path)
 
@@ -396,18 +358,18 @@ def light_curve_fitting(flare_settings, eve_lines_event, jedi_row, flare_index, 
                                                                                         plots_save_path='{0}Event {1} {2} '.format(
                                                                                             fitting_path,
                                                                                             flare_index, column),
-                                                                                        verbose=flare_settings.verbose,
-                                                                                        logger=flare_settings.logger,
-                                                                                        n_jobs=flare_settings.n_jobs)
+                                                                                        verbose=jedi_config.verbose,
+                                                                                        logger=jedi_config.logger,
+                                                                                        n_jobs=jedi_config.n_jobs)
             eve_lines_event[column] = light_curve_fit_df
             jedi_row[column + ' Fitting Gamma'] = best_fit_gamma
             jedi_row[column + ' Fitting Score'] = best_fit_score
 
-            if flare_settings.verbose:
-                flare_settings.logger.info('Event {0} {1} light curves fitted.'.format(flare_index, column))
+            if jedi_config.verbose:
+                jedi_config.logger.info('Event {0} {1} light curves fitted.'.format(flare_index, column))
 
 
-def determine_dimming(flare_settings, eve_lines_event, jedi_row, flare_index):
+def determine_dimming(jedi_config, eve_lines_event, jedi_row, flare_index):
 
     for column in eve_lines_event:
 
@@ -419,8 +381,8 @@ def determine_dimming(flare_settings, eve_lines_event, jedi_row, flare_index):
 
         # Determine whether to do the parameterizations or not
         if eve_lines_event[column].isnull().all().all():
-            if flare_settings.verbose:
-                flare_settings.logger.info(
+            if jedi_config.verbose:
+                jedi_config.logger.info(
                     'Event {0} {1} parameterization skipped because all irradiances are NaN.'.format(flare_index,
                                                                                                      column))
         else:
@@ -428,7 +390,7 @@ def determine_dimming(flare_settings, eve_lines_event, jedi_row, flare_index):
             eve_line_event.columns = ['irradiance']
 
             # Determine dimming depth (if any)
-            depth_path = flare_settings.output_path + 'Depth/'
+            depth_path = jedi_config.output_path + 'Depth/'
             if not os.path.exists(depth_path):
                 os.makedirs(depth_path)
 
@@ -436,23 +398,23 @@ def determine_dimming(flare_settings, eve_lines_event, jedi_row, flare_index):
             depth_percent, depth_time = determine_dimming_depth(eve_line_event,
                                                                 plot_path_filename='{0}Event {1} {2} Depth.png'.format(
                                                                     depth_path, flare_index, column),
-                                                                verbose=flare_settings.verbose, logger=flare_settings.logger)
+                                                                verbose=jedi_config.verbose, logger=jedi_config.logger)
 
             jedi_row[column + ' Depth [%]'] = depth_percent
             # jedi_row[column + ' Depth Uncertainty [%]'] = depth_uncertainty  # TODO: make determine_dimming_depth return the propagated uncertainty
             jedi_row[column + ' Depth Time'] = depth_time
 
             # Determine dimming slope (if any)
-            slope_path = flare_settings.output_path + 'Slope/'
+            slope_path = jedi_config.output_path + 'Slope/'
             if not os.path.exists(slope_path):
                 os.makedirs(slope_path)
 
-            slope_start_time = pd.Timestamp((flare_settings.goes_flare_events['peak_time'][flare_index]).iso)
+            slope_start_time = pd.Timestamp((jedi_config.goes_flare_events['peak_time'][flare_index]).iso)
             slope_end_time = depth_time
 
             if (pd.isnull(slope_start_time)) or (pd.isnull(slope_end_time)):
-                if flare_settings.verbose:
-                    flare_settings.logger.warning('Cannot compute slope or duration because slope bounding times NaN.')
+                if jedi_config.verbose:
+                    jedi_config.logger.warning('Cannot compute slope or duration because slope bounding times NaN.')
             else:
                 plt.close('all')
                 slope_min, slope_max, slope_mean = determine_dimming_slope(eve_line_event,
@@ -460,7 +422,7 @@ def determine_dimming(flare_settings, eve_lines_event, jedi_row, flare_index):
                                                                            latest_allowed_time=slope_end_time,
                                                                            plot_path_filename='{0}Event {1} {2} Slope.png'.format(
                                                                                slope_path, flare_index, column),
-                                                                           verbose=flare_settings.verbose, logger=flare_settings.logger)
+                                                                           verbose=jedi_config.verbose, logger=jedi_config.logger)
 
                 jedi_row[column + ' Slope Min [%/s]'] = slope_min
                 jedi_row[column + ' Slope Max [%/s]'] = slope_max
@@ -470,7 +432,7 @@ def determine_dimming(flare_settings, eve_lines_event, jedi_row, flare_index):
                 jedi_row[column + ' Slope End Time'] = slope_end_time
 
                 # Determine dimming duration (if any)
-                duration_path = flare_settings.output_path + 'Duration/'
+                duration_path = jedi_config.output_path + 'Duration/'
                 if not os.path.exists(duration_path):
                     os.makedirs(duration_path)
 
@@ -481,15 +443,15 @@ def determine_dimming(flare_settings, eve_lines_event, jedi_row, flare_index):
                                                                                                           duration_path,
                                                                                                           flare_index,
                                                                                                           column),
-                                                                                                      verbose=flare_settings.verbose,
-                                                                                                      logger=flare_settings.logger)
+                                                                                                      verbose=jedi_config.verbose,
+                                                                                                      logger=jedi_config.logger)
 
                 jedi_row[column + ' Duration [s]'] = duration_seconds
                 jedi_row[column + ' Duration Start Time'] = duration_start_time
                 jedi_row[column + ' Duration End Time'] = duration_end_time
 
-            if flare_settings.verbose:
-                flare_settings.logger.info("Event {0} {1} parameterizations complete.".format(flare_index, column))
+            if jedi_config.verbose:
+                jedi_config.logger.info("Event {0} {1} parameterizations complete.".format(flare_index, column))
 
             # Produce a summary plot for each light curve
             # plt.style.use('jpm-transparent-light')
@@ -536,15 +498,15 @@ def determine_dimming(flare_settings, eve_lines_event, jedi_row, flare_index):
                 plt.annotate(str(duration_seconds) + ' s', xy=(mid_time, 0), xycoords='data', ha='center', va='bottom',
                              size=18, color='dodgerblue')
 
-            summary_path = flare_settings.output_path + 'Summary Plots/'
+            summary_path = jedi_config.output_path + 'Summary Plots/'
             if not os.path.exists(summary_path):
                 os.makedirs(summary_path)
             summary_filename = '{0}Event {1} {2} Parameter Summary.png'.format(summary_path, flare_index, column)
             plt.savefig(summary_filename)
             plt.close('all')
 
-            if flare_settings.verbose:
-                flare_settings.logger.info("Summary plot saved to %s" % summary_filename)
+            if jedi_config.verbose:
+                jedi_config.logger.info("Summary plot saved to %s" % summary_filename)
 
 
 
