@@ -27,6 +27,9 @@ from determine_dimming_depth import determine_dimming_depth
 from determine_dimming_slope import determine_dimming_slope
 from determine_dimming_duration import determine_dimming_duration
 
+# Configuration
+import jedi_config
+
 __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
 
@@ -123,52 +126,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
         logger.info('Loaded GOES flare events.')
 
     # Define the columns of the JEDI catalog
-    jedi_row = pd.DataFrame([OrderedDict([
-                             ('Event #', np.nan),
-                             ('GOES Flare Start Time', np.nan),
-                             ('GOES Flare Peak Time', np.nan),
-                             ('GOES Flare Class', np.nan),
-                             ('Pre-Flare Start Time', np.nan),
-                             ('Pre-Flare End Time', np.nan),
-                             ('Flare Interrupt', np.nan)])])
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Pre-Flare Irradiance [W/m2]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Start Time'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope End Time'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Min [%/s]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Max [%/s]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Mean [%/s]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Uncertainty [%/s]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Depth Time'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Depth [%]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Depth Uncertainty [%]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Duration Start Time'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Duration End Time'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Duration [s]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Fitting Gamma'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Fitting Score'))
-
-    ion_tuples = list(itertools.permutations(eve_lines.columns.values, 2))
-    ion_permutations = pd.Index([' by '.join(ion_tuples[i]) for i in range(len(ion_tuples))])
-
-    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Slope Start Time'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Slope End Time'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Slope Min [%/s]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Slope Max [%/s]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Slope Mean [%/s]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Slope Uncertainty [%/s]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Depth Time'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Depth [%]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Depth Uncertainty [%]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Duration Start Time'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Duration End Time'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Duration [s]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Correction Time Shift [s]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Correction Scale Factor'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Fitting Gamma'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Fitting Score'))
-
-    csv_filename = output_path + 'jedi_{0}.csv'.format(Time.now().iso)
-    jedi_row.to_csv(csv_filename, header=True, index=False, mode='w')
+    jedi_row = init_jedi_row(eve_lines, jedi_config.jedi_csv_filename)
 
     if verbose:
         logger.info('Created JEDI row definition.')
@@ -508,6 +466,106 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
 
     #progress_bar.finish()
 
+def init_jedi_row(eve_lines, jedi_csv_filename):
+    """Internal-use function for defining the column headers in the JEDI catalog and starting a fresh csv file on disk
+
+        Inputs:
+            eve_lines [pandas DataFrame]: The EVE data with a DatetimeIndex and an irradiance column for each of the
+                                          extracted emission line wavelengths.
+             jedi_csv_filename [str]:     The path/filename to save the JEDI csv file to.
+
+        Optional Inputs:
+            None
+
+        Outputs:
+            jedi_row [pandas DataFrame]: A ~24k column DataFrame with only a single row populated with np.nan's.
+
+        Optional Outputs:
+            None
+
+        Example:
+            jedi_row = init_jedi_row(eve_lines, jedi_csv_filename)
+        """
+    jedi_row = pd.DataFrame([OrderedDict([
+                                          ('Event #', np.nan),
+                                          ('GOES Flare Start Time', np.nan),
+                                          ('GOES Flare Peak Time', np.nan),
+                                          ('GOES Flare Class', np.nan),
+                                          ('Pre-Flare Start Time', np.nan),
+                                          ('Pre-Flare End Time', np.nan),
+                                          ('Flare Interrupt', np.nan)])])
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Pre-Flare Irradiance [W/m2]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Start Time'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope End Time'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Min [%/s]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Max [%/s]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Mean [%/s]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Uncertainty [%/s]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Depth Time'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Depth [%]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Depth Uncertainty [%]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Duration Start Time'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Duration End Time'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Duration [s]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Fitting Gamma'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Fitting Score'))
+
+    ion_tuples = list(itertools.permutations(eve_lines.columns.values, 2))
+    ion_permutations = pd.Index([' by '.join(ion_tuples[i]) for i in range(len(ion_tuples))])
+
+    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Slope Start Time'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Slope End Time'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Slope Min [%/s]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Slope Max [%/s]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Slope Mean [%/s]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Slope Uncertainty [%/s]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Depth Time'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Depth [%]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Depth Uncertainty [%]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Duration Start Time'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Duration End Time'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Duration [s]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Correction Time Shift [s]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Correction Scale Factor'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Fitting Gamma'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Fitting Score'))
+
+    jedi_row.to_csv(jedi_csv_filename, header=True, index=False, mode='w')
+
+    return jedi_row
+
+def map_preflare_index_to_flare_index(tmask, irange):
+    """Internal-use function for translating the <5k preflare_indices to the ~5k flare_indices
+    Given a mask of True/False values and an array of indices, create a new array of same size as irange,
+    with the index of the nearest preceding True value.
+    Why?
+    When flares occur close together in time, they can't be considered independent. In these cases, the pre-flare
+    irradiance for flare #2 can't be computed because flare #1 was still in progress. Instead, we use the pre-flare
+    irradiance determined for flare #1. This can be true for flare #3, 4, 5, etc until a sufficient time gap occurs
+    before the next flare and a "fresh" pre-flare irradiance can be computed. Since that time gap is fixed (it's a
+    tuneable parameter in jedi_config) we can determine a priori which flares are independent and only compute the
+    pre-flare irradiance for those. Thus, the array we end up with is smaller than the total number of flares. This
+    function tells you which pre-flare irradiance index to access for the flare index you are currently processing.
+    Thanks to Raphael Attie for conceiving of and implementing this logic, which can be easily parallelized and
+    processed just a single time to speed up code execution.
+
+    Inputs:
+    # TODO: Pick up conversion here! JPM
+    :param tmask: logical numpy array. False wherever we need the location of the nearest preceding True.
+    :param irange: array of tmask indices. Must satisfy len(irange) <= tmask.size()
+    :return: Array of indices of True in tmask that are immediately preceding the irange indices.
+
+    Example:
+    tmask = np.array([1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0])
+    irange = range(0,8)
+    returns: array([0, 0, 0, 3, 4, 5, 5, 7])
+    """
+
+    invalid_index = -1
+    idx = np.where(tmask)[0]
+    sidx = np.searchsorted(idx, irange, 'right')-1
+    indices = np.where(sidx == -1, invalid_index, idx[sidx])
+    return indices
 
 def merge_jedi_catalog_files(
         file_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',

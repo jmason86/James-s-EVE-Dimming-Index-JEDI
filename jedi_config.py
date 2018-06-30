@@ -1,5 +1,5 @@
+# Standard modules
 import os
-from jpm_logger import JpmLogger
 from astropy.time import Time
 from scipy.io.idl import readsav
 import numpy as np
@@ -7,11 +7,10 @@ import pandas as pd
 from collections import OrderedDict
 import itertools
 
-# For sharing variable across modules:
-# See https://stackoverflow.com/questions/13034496/using-global-variables-between-files
-# and https://docs.python.org/2/faq/programming.html#how-do-i-share-global-variables-across-modules
+# Custom modules
+from jpm_logger import JpmLogger
 
-
+# Declare variables (some with defaults) to be accessed by anything that imports this module
 eve_data_path = ''
 goes_data_path = ''
 output_path = ''
@@ -29,15 +28,15 @@ verbose = True
 eve_lines = None
 goes_flare_events = None
 logger = None
-csv_filename = None
+jedi_csv_filename = None
 preflare_hdf_filename = None
 jedi_df = None
 
 def init():
 
-    global eve_lines, goes_flare_events, logger, csv_filename, preflare_hdf_filename
+    global eve_lines, goes_flare_events, logger, jedi_csv_filename, preflare_hdf_filename
 
-    #csv_filename = output_path + 'jedi_{0}.csv'.format(Time.now().iso)
+    jedi_csv_filename = output_path + 'jedi_{0}.csv'.format(Time.now().iso)
     preflare_hdf_filename = os.path.join(output_path, 'preflare_df.hdf5')
 
     logger = JpmLogger(filename=logger_filename, path=output_path, console=False)

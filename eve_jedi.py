@@ -77,34 +77,8 @@ def make_jedi_row(eve_lines, csv_filename):
     return jedi_row, ion_tuples, ion_permutations
 
 
-def map_true_indices(tmask, irange):
-    """
-    Given a mask of True/False values and an array of indices, create a new array of same size as irange,
-    with the index of the nearest preceding True value.
-
-    :param tmask: logical numpy array. False wherever we need the location of the nearest preceding True.
-    :param irange: array of tmask indices. Must satisfy len(irange) <= tmask.size()
-    :return: Array of indices of True in tmask that are immediately preceding the irange indices.
-
-    Example:
-    tmask = np.array([1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0])
-    irange = range(0,8)
-    returns: array([0, 0, 0, 3, 4, 5, 5, 7])
-    """
-
-    true_indices = np.where(tmask)[0]
-    mapped_indices = np.empty(len(irange), dtype=np.int)
-
-    for i, index in enumerate(irange):
-        index_loc = np.where(true_indices <= index)[0][-1]
-        mapped_indices[i] = true_indices[index_loc]
-
-    return mapped_indices
-
-
 def map_true_indices2(tmask, irange):
-    """ Fast version of map_true_indices
-
+    """
     Given a mask of True/False values and an array of indices, create a new array of same size as irange,
     with the index of the nearest preceding True value.
 
@@ -123,9 +97,6 @@ def map_true_indices2(tmask, irange):
     sidx = np.searchsorted(idx, irange, 'right')-1
     indices = np.where(sidx == -1, invalid_index, idx[sidx])
     return indices
-
-
-
 
 
 def loop_preflare_irradiance(flare_index):
@@ -195,7 +166,7 @@ def clip_eve_data_to_dimming_window(flare_index):
         # Leave all dimming parameters as NaN and write this null result to the CSV on disk
 
         # TODO: TO BE REVIEWED IF USING jedi_df as a ~5k x 24k dataframe!!!!!
-        jedi_config.jedi_df.to_csv(jedi_config.csv_filename, header=False, index=False, mode='a')
+        jedi_config.jedi_df.to_csv(jedi_config.jedi_csv_filename, header=False, index=False, mode='a')
 
         # Log message
         if jedi_config.verbose:

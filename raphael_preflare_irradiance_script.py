@@ -22,7 +22,7 @@ def prep_preflare_irradiance():
 jedi_config.eve_data_path = '/Users/rattie/Data/James/eve_lines_2010121-2014146 MEGS-A Mission Bare Bones.sav'
 jedi_config.goes_data_path = '/Users/rattie/Data/James/GoesEventsC1MinMegsAEra.sav'
 jedi_config.output_path = '/Users/rattie/Data/James/output/'
-jedi_config.csv_filename = jedi_config.output_path + 'jedi_{0}.csv'.format(Time.now().iso)
+jedi_config.jedi_csv_filename = jedi_config.output_path + 'jedi_{0}.csv'.format(Time.now().iso)
 jedi_config.verbose = False
 jedi_config.logger_filename = 'determine_preflare_irradiance_log'
 # Nb of workers used in processing parallelized over the pre-flare indices.
