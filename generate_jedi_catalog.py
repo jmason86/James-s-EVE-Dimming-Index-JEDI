@@ -96,46 +96,6 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
     if verbose:
         logger.info('Loaded EVE data')
 
-    # Create metadata dictionary
-    # TODO: Replace this shortcut method with the method I'm building into sunpy
-    from sunpy.util.metadata import MetaDict
-    metadata = MetaDict()
-    metadata['ion'] = eve_readsav['name']
-    metadata['temperature_ion_peak_formation'] = np.power(10.0, eve_readsav['logt']) * u.Kelvin
-    metadata['extracted_wavelength_center'] = eve_readsav['wavelength'] * u.nm
-    metadata['extracted_wavelength_min'] = metadata['extracted_wavelength_center']
-    metadata['extracted_wavelength_max'] = metadata['extracted_wavelength_center']
-    metadata['emission_line_blends'] = ['none', 'yay', 'poop', 'Fe vi']  # etc
-    metadata['exposure_time'] = 60.0 * u.second  # These example EVE data are already binned down to 1 minute
-    metadata['precision'] = ['Not implemented in prototype']
-    metadata['accuracy'] = ['Not implemented in prototype']
-    metadata['flags'] = ['Not implemented in prototype']
-    metadata['flags_description'] = '1 = MEGS-A data is missing, ' \
-                                    '2 = MEGS-B data is missing, ' \
-                                    '4 = ESP data is missing, ' \
-                                    '8 = MEGS-P data is missing, ' \
-                                    '16 = Possible clock adjust in MEGS-A, ' \
-                                    '32 = Possible clock adjust in MEGS-B, ' \
-                                    '64 = Possible clock adjust in ESP, ' \
-                                    '128 = Possible clock adjust in MEGS-P'
-    metadata['flags_spacecraft'] = ['Not implemented in prototype']
-    metadata['flags_spacecraft_description'] = '0 = No obstruction, ' \
-                                               '1 = Warm up from Earth eclipse, ' \
-                                               '2 = Obstruction atmosphere penumbra, ' \
-                                               '3 = Obstruction atmosphere umbra, ' \
-                                               '4 = Obstruction penumbra of Mercury, ' \
-                                               '5 = Obstruction penumbra of Mercury, ' \
-                                               '6 = Obstruction penumbra of Venus, ' \
-                                               '7 = Obstruction umbra of Venus, ' \
-                                               '8 = Obstruction penumbra of Moon, ' \
-                                               '9 = Obstruction umbra of Moon, ' \
-                                               '10 = Obstruction penumbra of solid Earth, ' \
-                                               '11 = Obstruction umbra of solid Earth, ' \
-                                               '16 = Observatory is off-pointed by more than 1 arcmin'
-    metadata['data_version'] = ['Not implemented in prototype']
-    metadata['data_reprocessed_revision'] = ['Not implemented in prototype']
-    metadata['filename'] = ['Not implemented in prototype']
-
     # Load up the actual irradiance data into a pandas DataFrame
     # TODO: Replace this shortcut method with the method I'm building into sunpy
     irradiance = eve_readsav['irradiance'].byteswap().newbyteorder()  # pandas doesn't like big endian
