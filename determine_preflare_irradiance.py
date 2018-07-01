@@ -208,9 +208,9 @@ def get_preflare_irradiance_all_emission_lines(flare_index,
             flare_index [int]: The identifier for which event in JEDI to process
 
         Optional Inputs:
-            verbose [bool]:                    Set to log the processing messages to disk and console. Default is False.
-            logger [JpmLogger]:                A configured logger from jpm_logger.py. If set to None, will generate a
-                                               new one. Default is None.
+            verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
+            logger [JpmLogger]: A configured logger from jpm_logger.py. If set to None, will generate a new one.
+                                Default is None.
 
         Outputs:
             preflare_irradiance [float]: The identified pre-flare irradiance level in the same units as light_curve_df.irradiance.
@@ -228,9 +228,8 @@ def get_preflare_irradiance_all_emission_lines(flare_index,
     if verbose:
         if not logger:
             logger = JpmLogger(filename='determine_preflare_irradiance_log', path='/Users/jmason86/Desktop/')
-        logger.info("Running on event with peak start time of {0}.".format(estimated_time_of_peak_start))
+        logger.info("Running on event {0}.".format(flare_index))
 
-    print('Processing event at flare_index = %d' % flare_index)
     # Clip EVE data from threshold_time_prior_flare_minutes prior to flare up to peak flare time
     preflare_window_start = (jedi_config.goes_flare_events['peak_time'][flare_index] - (jedi_config.threshold_time_prior_flare_minutes * u.minute)).iso
     preflare_window_end = (jedi_config.goes_flare_events['peak_time'][flare_index]).iso
@@ -239,7 +238,6 @@ def get_preflare_irradiance_all_emission_lines(flare_index,
     # Loop through the emission lines and get pre-flare irradiance for each
     preflare_irradiance = []
     for column in eve_lines_preflare_time:
-        #print("column %s" % column)
         eve_line_preflare_time = pd.DataFrame(eve_lines_preflare_time[column])
         eve_line_preflare_time.columns = ['irradiance']
 
@@ -254,17 +252,47 @@ def get_preflare_irradiance_all_emission_lines(flare_index,
     return preflare_irradiance, preflare_window_start, preflare_window_end
 
 
-def multiprocess_preflare_irradiance(preflare_indices, nworkers):
+def multiprocess_preflare_irradiance(preflare_indices, nworkers,
+                                     verbose=False, logger=None):
+    """Multi-threaded processing of pre-flare irradiance across time-independent flares
+
+        Inputs:
+            preflare_indices [np int array]: The subset of flare_indices that correspond to time-independent flares.
+            nworkers [int]:                  The number of parallel threads to use.
+
+        Optional Inputs:
+            verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
+            logger [JpmLogger]: A configured logger from jpm_logger.py. If set to None, will generate a new one.
+                                Default is None.
+
+        Outputs:
+            preflare_irradiance [float]: The identified pre-flare irradiance level in the same units as light_curve_df.irradiance.
+            preflare_window_start [str]: The time that the pre-flare irradiance calculation starts.
+            preflare_window_end [str]:   The time that the pre-flare irradiance calculation ends.
+
+        Optional Outputs:
+            None
+
+        Example:
+            preflare_irradiance, preflare_window_start, preflare_window_end = multiprocess_preflare_irradiance(preflare_indices, 4)
+    """
+    # Prepare the logger for verbose
+    if verbose:
+        if not logger:
+            logger = JpmLogger(filename='determine_preflare_irradiance_log', path='/Users/jmason86/Desktop/')
+        logger.info("Running on {0} events with {1} threads.".format(len(preflare_indices), nworkers))
 
     if nworkers == 1:
         preflare_irradiances, preflare_windows_start, preflare_windows_end = zip(*map(get_preflare_irradiance_all_emission_lines, preflare_indices))
-        print('Preparing export of dataframe')
+        logger.info('Preparing export of dataframe')
     else:
         pool = mp.Pool(processes=nworkers)
         preflare_irradiances, preflare_windows_start, preflare_windows_end = zip(*pool.map(get_preflare_irradiance_all_emission_lines, preflare_indices))
         pool.close()
-        print('Pool closed. Preparing export of dataframe')
+        logger.info('Pool closed. Preparing export of dataframe')
 
     preflare_irradiances = np.array(preflare_irradiances)
     preflare_windows_start = preflare_windows_start
     preflare_windows_end = preflare_windows_end
+
+    return preflare_irradiances, preflare_windows_start, preflare_windows_end
