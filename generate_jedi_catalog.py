@@ -534,9 +534,9 @@ def init_jedi_row(eve_lines, jedi_csv_filename):
 
     return jedi_row
 
-def map_preflare_index_to_flare_index(tmask, irange):
+def map_preflare_index_to_flare_index(is_independent_flare):
     """Internal-use function for translating the <5k preflare_indices to the ~5k flare_indices
-    Given a mask of True/False values and an array of indices, create a new array of same size as irange,
+    Given a mask of True/False values and an array of indices, create a new array of same size,
     with the index of the nearest preceding True value.
     Why?
     When flares occur close together in time, they can't be considered independent. In these cases, the pre-flare
@@ -550,22 +550,29 @@ def map_preflare_index_to_flare_index(tmask, irange):
     processed just a single time to speed up code execution.
 
     Inputs:
-    # TODO: Pick up conversion here! JPM
-    :param tmask: logical numpy array. False wherever we need the location of the nearest preceding True.
-    :param irange: array of tmask indices. Must satisfy len(irange) <= tmask.size()
-    :return: Array of indices of True in tmask that are immediately preceding the irange indices.
+        is_independent_flare [logical numpy array]: False wherever we need the location of the nearest preceding True.
+
+    Optional Inputs:
+        None
+
+    Outputs:
+        preflare_map_indices [numpy array]: Map of each flare_index to which preflare irradiance index to use.
+
+    Optional Outputs:
+        None
 
     Example:
-    tmask = np.array([1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0])
-    irange = range(0,8)
-    returns: array([0, 0, 0, 3, 4, 5, 5, 7])
+        is_independent_flare = all_minutes_since_last_flare > jedi_config.threshold_time_prior_flare_minutes
+            yields something like: np.array([1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0])
+        preflare_map_indices = map_preflare_index_to_flare_index(is_independent_flare)
+            returns: np.array([0, 0, 0, 3, 4, 5, 5, 7])
     """
-
+    irange = range(is_independent_flare)
     invalid_index = -1
-    idx = np.where(tmask)[0]
+    idx = np.where(is_independent_flare)[0]
     sidx = np.searchsorted(idx, irange, 'right')-1
-    indices = np.where(sidx == -1, invalid_index, idx[sidx])
-    return indices
+    preflare_map_indices = np.where(sidx == -1, invalid_index, idx[sidx])
+    return preflare_map_indices
 
 def merge_jedi_catalog_files(
         file_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
