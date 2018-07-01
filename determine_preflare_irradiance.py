@@ -2,10 +2,15 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import multiprocessing as mp
+import astropy.units as u
 
 # Custom modules
 from jpm_logger import JpmLogger
 from jpm_number_printing import latex_float
+
+# Configuration
+import jedi_config
 
 __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
@@ -45,7 +50,6 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
                                                             plot_path_filename='./bla.png',
                                                             verbose=True)
     """
-
     # Prepare the logger for verbose
     if verbose:
         if not logger:
@@ -194,3 +198,73 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
             logger.info("Summary plot for event with start time {0} saved to {1}".format(estimated_time_of_peak_start, plot_path_filename))
 
     return preflare_irradiance
+
+
+def get_preflare_irradiance_all_emission_lines(flare_index,
+                             verbose=False, logger=None):
+    """Loop through all (39) of the EVE extracted emission lines and get the pre-flare irradiance for each
+
+        Inputs:
+            flare_index [int]: The identifier for which event in JEDI to process
+
+        Optional Inputs:
+            verbose [bool]:                    Set to log the processing messages to disk and console. Default is False.
+            logger [JpmLogger]:                A configured logger from jpm_logger.py. If set to None, will generate a
+                                               new one. Default is None.
+
+        Outputs:
+            preflare_irradiance [float]: The identified pre-flare irradiance level in the same units as light_curve_df.irradiance.
+            preflare_window_start [str]: The time that the pre-flare irradiance calculation starts.
+            preflare_window_end [str]:   The time that the pre-flare irradiance calculation ends.
+
+        Optional Outputs:
+            None
+
+        Example:
+            preflare_irradiance, preflare_window_start, preflare_window_end = get_preflare_irradiance_all_emission_lines(flare_index,
+                                                                                                       verbose=verbose, logger=logger)
+    """
+    # Prepare the logger for verbose
+    if verbose:
+        if not logger:
+            logger = JpmLogger(filename='determine_preflare_irradiance_log', path='/Users/jmason86/Desktop/')
+        logger.info("Running on event with peak start time of {0}.".format(estimated_time_of_peak_start))
+
+    print('Processing event at flare_index = %d' % flare_index)
+    # Clip EVE data from threshold_time_prior_flare_minutes prior to flare up to peak flare time
+    preflare_window_start = (jedi_config.goes_flare_events['peak_time'][flare_index] - (jedi_config.threshold_time_prior_flare_minutes * u.minute)).iso
+    preflare_window_end = (jedi_config.goes_flare_events['peak_time'][flare_index]).iso
+    eve_lines_preflare_time = jedi_config.eve_lines[preflare_window_start:preflare_window_end]
+
+    # Loop through the emission lines and get pre-flare irradiance for each
+    preflare_irradiance = []
+    for column in eve_lines_preflare_time:
+        #print("column %s" % column)
+        eve_line_preflare_time = pd.DataFrame(eve_lines_preflare_time[column])
+        eve_line_preflare_time.columns = ['irradiance']
+
+        preflare_temp = determine_preflare_irradiance(eve_line_preflare_time,
+                                                      pd.Timestamp(jedi_config.goes_flare_events['start_time'][flare_index].iso),
+                                                      plot_path_filename=os.path.join(jedi_config.output_path, 'Preflare_Determination', 'Event_%d_%s.png' % (flare_index, column)),
+                                                      verbose=jedi_config.verbose,
+                                                      logger=jedi_config.logger)
+
+        preflare_irradiance.append(preflare_temp)
+
+    return preflare_irradiance, preflare_window_start, preflare_window_end
+
+
+def multiprocess_preflare_irradiance(preflare_indices, nworkers):
+
+    if nworkers == 1:
+        preflare_irradiances, preflare_windows_start, preflare_windows_end = zip(*map(get_preflare_irradiance_all_emission_lines, preflare_indices))
+        print('Preparing export of dataframe')
+    else:
+        pool = mp.Pool(processes=nworkers)
+        preflare_irradiances, preflare_windows_start, preflare_windows_end = zip(*pool.map(get_preflare_irradiance_all_emission_lines, preflare_indices))
+        pool.close()
+        print('Pool closed. Preparing export of dataframe')
+
+    preflare_irradiances = np.array(preflare_irradiances)
+    preflare_windows_start = preflare_windows_start
+    preflare_windows_end = preflare_windows_end
