@@ -574,9 +574,77 @@ def map_preflare_index_to_flare_index(is_independent_flare):
     preflare_map_indices = np.where(sidx == -1, invalid_index, idx[sidx])
     return preflare_map_indices
 
-def merge_jedi_catalog_files(
-        file_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
-        verbose=False):
+def clip_eve_data_to_dimming_window(flare_index,
+                                    verbose=False, logger=None):
+    """Clip all EVE data (4+ years) down to just the time range of interest for this particular event (~hours)
+
+            Inputs:
+                flare_index [int]: The identifier for which event in JEDI to process
+
+            Optional Inputs:
+                verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
+                logger [JpmLogger]: A configured logger from jpm_logger.py. If set to None, will generate a new one.
+                                    Default is None.
+
+            Outputs:
+                eve_lines_event [pandas DataFrame]: The (39) EVE extracted emission lines (columns) trimmed in time (rows).
+
+            Optional Outputs:
+                None
+
+            Example:
+                eve_lines_event = clip_eve_data_to_dimming_window(flare_index,
+                                                                  verbose=verbose, logger=logger)
+        """
+    # Prepare the logger for verbose
+    if verbose:
+        if not logger:
+            logger = JpmLogger(filename='determine_preflare_irradiance_log', path='/Users/jmason86/Desktop/')
+        logger.info("Clipping EVE data in time for event {0}.".format(flare_index))
+
+    flare_interrupt = False
+
+    # Clip EVE data to dimming window
+    bracket_time_left = (jedi_config.goes_flare_events['peak_time'][flare_index] + (jedi_config.dimming_window_relative_to_flare_minutes_left * u.minute))
+    next_flare_time = Time((jedi_config.goes_flare_events['peak_time'][flare_index + 1]).iso)
+    user_choice_time = (jedi_config.goes_flare_events['peak_time'][flare_index] + (jedi_config.dimming_window_relative_to_flare_minutes_right * u.minute))
+    bracket_time_right = min(next_flare_time, user_choice_time)
+
+    # If flare is shortening the window, set the flare_interrupt flag
+    if bracket_time_right == next_flare_time:
+        flare_interrupt = True
+        if jedi_config.verbose:
+            jedi_config.logger.info('Flare interrupt for event at {0} by flare at {1}'.format(jedi_config.goes_flare_events['peak_time'][flare_index].iso, next_flare_time))
+
+    # Write flare_interrupt to JEDI row
+    jedi_config.jedi_df.at[flare_index, 'Flare Interrupt'] = flare_interrupt
+
+    if ((bracket_time_right - bracket_time_left).sec / 60.0) < jedi_config.threshold_minimum_dimming_window_minutes:
+        # Leave all dimming parameters as NaN and write this null result to the CSV on disk
+
+        # TODO: TO BE REVIEWED IF USING jedi_df as a ~5k x 24k dataframe!!!!!
+        jedi_config.jedi_df.to_csv(jedi_config.jedi_csv_filename, header=False, index=False, mode='a')
+
+        # Log message
+        if jedi_config.verbose:
+            jedi_config.logger.info(
+                'The dimming window duration of {0} minutes is shorter than the minimum threshold of {1} minutes. Skipping this event ({2})'
+                    .format(((bracket_time_right - bracket_time_left).sec / 60.0),
+                            jedi_config.threshold_minimum_dimming_window_minutes,
+                            jedi_config.goes_flare_events['peak_time'][flare_index]))
+
+        eve_lines_event = False
+
+    else:
+        eve_lines_event = jedi_config.eve_lines[bracket_time_left.iso:bracket_time_right.iso]
+        if jedi_config.verbose:
+            jedi_config.logger.info("Event {0} EVE data clipped to dimming window.".format(flare_index))
+
+    return eve_lines_event
+
+
+def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
+                             verbose=False):
     """Function for merging the .csv output files of generate_jedi_catalog()
 
     Inputs:
