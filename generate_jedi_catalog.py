@@ -578,28 +578,28 @@ def clip_eve_data_to_dimming_window(flare_index,
                                     verbose=False, logger=None):
     """Clip all EVE data (4+ years) down to just the time range of interest for this particular event (~hours)
 
-            Inputs:
-                flare_index [int]: The identifier for which event in JEDI to process
+    Inputs:
+        flare_index [int]: The identifier for which event in JEDI to process.
 
-            Optional Inputs:
-                verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
-                logger [JpmLogger]: A configured logger from jpm_logger.py. If set to None, will generate a new one.
-                                    Default is None.
+    Optional Inputs:
+        verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
+        logger [JpmLogger]: A configured logger from jpm_logger.py. If set to None, will generate a new one.
+                            Default is None.
 
-            Outputs:
-                eve_lines_event [pandas DataFrame]: The (39) EVE extracted emission lines (columns) trimmed in time (rows).
+    Outputs:
+        eve_lines_event [pandas DataFrame]: The (39) EVE extracted emission lines (columns) trimmed in time (rows).
 
-            Optional Outputs:
-                None
+    Optional Outputs:
+        None
 
-            Example:
-                eve_lines_event = clip_eve_data_to_dimming_window(flare_index,
-                                                                  verbose=verbose, logger=logger)
-        """
+    Example:
+        eve_lines_event = clip_eve_data_to_dimming_window(flare_index,
+                                                          verbose=verbose, logger=logger)
+    """
     # Prepare the logger for verbose
     if verbose:
         if not logger:
-            logger = JpmLogger(filename='determine_preflare_irradiance_log', path='/Users/jmason86/Desktop/')
+            logger = JpmLogger(filename='clip_eve_data_to_dimming_window_log', path='/Users/jmason86/Desktop/')
         logger.info("Clipping EVE data in time for event {0}.".format(flare_index))
 
     flare_interrupt = False
@@ -641,6 +641,326 @@ def clip_eve_data_to_dimming_window(flare_index,
             jedi_config.logger.info("Event {0} EVE data clipped to dimming window.".format(flare_index))
 
     return eve_lines_event
+
+
+def loop_light_curve_peak_match_subtract(eve_lines_event, jedi_row, flare_index, ion_tuples, ion_permutations,
+                                         verbose=False, logger=None):
+    """Loop through all of the ion permutations, match the pairs of light curves at the flare peak and subtract them
+
+    Inputs:
+        eve_lines_event [pandas DataFrame]: The (39) EVE extracted emission lines (columns) trimmed in time (rows).
+        jedi_row [pandas DataFrame]:        A ~24k column DataFrame with only a single row.
+        flare_index [int]:                  The identifier for which event in JEDI to process.
+        ion_tuples [list of tuples]:        Every pair-permutation of the 39 extracted EVE emission lines.
+        ion_permutations [string array]:    Every pair-permutation of the 39 extracted EVE emission lines with "by" between them.
+
+    Optional Inputs:
+        verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
+        logger [JpmLogger]: A configured logger from jpm_logger.py. If set to None, will generate a new one.
+                            Default is None.
+
+    Outputs:
+        No new outputs; appends to eve_lines_event and fills in jedi_row
+
+    Optional Outputs:
+        None
+
+    Example:
+        loop_light_curve_peak_match_subtract(eve_lines_event, jedi_row, flare_index, ion_tuples, ion_permutations,
+                                             verbose=verbose, logger=logger)
+    """
+    # Prepare the logger for verbose
+    if verbose:
+        if not logger:
+            logger = JpmLogger(filename='loop_light_curve_peak_match_subtract_log', path='/Users/jmason86/Desktop/')
+        logger.info("Clipping EVE data in time for event {0}.".format(flare_index))
+
+    for i in range(len(ion_tuples)):
+        light_curve_to_subtract_from_df = pd.DataFrame(eve_lines_event[ion_tuples[i][0]])
+        light_curve_to_subtract_from_df.columns = ['irradiance']
+        light_curve_to_subtract_with_df = pd.DataFrame(eve_lines_event[ion_tuples[i][1]])
+        light_curve_to_subtract_with_df.columns = ['irradiance']
+
+        if (light_curve_to_subtract_from_df.isnull().all().all()) or (light_curve_to_subtract_with_df.isnull().all().all()):
+            if jedi_config.verbose:
+                jedi_config.logger.info(
+                    'Event {0} {1} correction skipped because all irradiances are NaN.'.format(flare_index,
+                                                                                               ion_permutations[
+                                                                                                   i]))
+        else:
+            light_curve_corrected, seconds_shift, scale_factor = light_curve_peak_match_subtract(
+                light_curve_to_subtract_from_df,
+                light_curve_to_subtract_with_df,
+                pd.Timestamp((jedi_config.goes_flare_events['peak_time'][flare_index]).iso),
+                plot_path_filename=jedi_config.output_path + 'Peak Subtractions/Event {0} {1}.png'.format(flare_index,
+                                                                                              ion_permutations[i]),
+                verbose=jedi_config.verbose, logger=jedi_config.logger)
+
+            eve_lines_event[ion_permutations[i]] = light_curve_corrected  # TODO: Verify that I don't have to pass this back, i.e., this changes the df outside of this function
+            jedi_row[ion_permutations[i] + ' Correction Time Shift [s]'] = seconds_shift
+            jedi_row[ion_permutations[i] + ' Correction Scale Factor'] = scale_factor
+
+            plt.close('all')
+
+            if jedi_config.verbose:
+                jedi_config.logger.info('Event {0} flare removal correction complete'.format(flare_index))
+
+
+def loop_light_curve_fit(eve_lines_event, jedi_row, flare_index, uncertainty,
+                         verbose=False, logger=None):
+    """Loop through all of the light curves for an event (flare_index) and fit them
+
+    Inputs:
+        eve_lines_event [pandas DataFrame]: The (39) EVE extracted emission lines (columns) trimmed in time (rows).
+        jedi_row [pandas DataFrame]:        A ~24k column DataFrame with only a single row.
+        flare_index [int]:                  The identifier for which event in JEDI to process.
+        uncertainty [numpy array]:          An array containing the uncertainty of each irradiance value. TODO: Needs to be properly populated.
+
+    Optional Inputs:
+        verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
+        logger [JpmLogger]: A configured logger from jpm_logger.py. If set to None, will generate a new one.
+                            Default is None.
+
+    Outputs:
+        No new outputs; appends to eve_lines_event and fills in jedi_row
+
+    Optional Outputs:
+        None
+
+    Example:
+        loop_light_curve_fit(eve_lines_event, jedi_row, flare_index, uncertainty,
+                             verbose=verbose, logger=logger)
+    """
+    # Prepare the logger for verbose
+    if verbose:
+        if not logger:
+            logger = JpmLogger(filename='loop_light_curve_fit', path='/Users/jmason86/Desktop/')
+    logger.info("Fitting light curves for event {0}.".format(flare_index))
+
+    for i, column in enumerate(eve_lines_event):
+        if eve_lines_event[column].isnull().all().all():
+            if jedi_config.verbose:
+                jedi_config.logger.info(
+                    'Event {0} {1} fitting skipped because all irradiances are NaN.'.format(flare_index, column))
+        else:
+            eve_line_event = pd.DataFrame(eve_lines_event[column])
+            eve_line_event.columns = ['irradiance']
+            eve_line_event['uncertainty'] = uncertainty
+
+            fitting_path = jedi_config.output_path + 'Fitting/'
+            if not os.path.exists(fitting_path):
+                os.makedirs(fitting_path)
+
+            plt.close('all')
+            light_curve_fit_df, best_fit_gamma, best_fit_score = light_curve_fit(eve_line_event,
+                                                                                 gamma=np.array([5e-8]),
+                                                                                 plots_save_path='{0}Event {1} {2} '.format(fitting_path, flare_index, column),
+                                                                                 verbose=jedi_config.verbose,
+                                                                                 logger=jedi_config.logger,
+                                                                                 n_jobs=jedi_config.n_jobs)
+            eve_lines_event[column] = light_curve_fit_df  # TODO: Verify that I don't have to pass this back, i.e., this changes the df outside of this function
+            jedi_row[column + ' Fitting Gamma'] = best_fit_gamma
+            jedi_row[column + ' Fitting Score'] = best_fit_score
+
+            if jedi_config.verbose:
+                jedi_config.logger.info('Event {0} {1} light curves fitted.'.format(flare_index, column))
+
+
+def determine_dimming_parameters(eve_lines_event, jedi_row, flare_index,
+                                 verbose=False, logger=None):
+    """For every light curve, determine the dimming parameters (depth, slope, duration) wherever possible
+
+    Inputs:
+        eve_lines_event [pandas DataFrame]: The (39) EVE extracted emission lines (columns) trimmed in time (rows).
+        jedi_row [pandas DataFrame]:        A ~24k column DataFrame with only a single row.
+        flare_index [int]:                  The identifier for which event in JEDI to process.
+
+    Optional Inputs:
+        verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
+        logger [JpmLogger]: A configured logger from jpm_logger.py. If set to None, will generate a new one.
+                            Default is None.
+
+    Outputs:
+        No new outputs; appends to eve_lines_event and fills in jedi_row
+
+    Optional Outputs:
+        None
+
+    Example:
+        determine_dimming_parameters(eve_lines_event, jedi_row, flare_index,
+                                     verbose=verbose, logger=logger)
+    """
+    # Prepare the logger for verbose
+    if verbose:
+        if not logger:
+            logger = JpmLogger(filename='loop_light_curve_fit', path='/Users/jmason86/Desktop/')
+    logger.info("Fitting light curves for event {0}.".format(flare_index))
+
+    for column in eve_lines_event:
+
+        # Null out all parameters
+        depth_percent, depth_time = np.nan, np.nan
+        slope_start_time, slope_end_time = np.nan, np.nan
+        slope_min, slope_max, slope_mean = np.nan, np.nan, np.nan
+        duration_seconds, duration_start_time, duration_end_time = np.nan, np.nan, np.nan
+
+        # Determine whether to do the parameterizations or not
+        if eve_lines_event[column].isnull().all().all():
+            if jedi_config.verbose:
+                jedi_config.logger.info(
+                    'Event {0} {1} parameterization skipped because all irradiances are NaN.'.format(flare_index,
+                                                                                                     column))
+        else:
+            eve_line_event = pd.DataFrame(eve_lines_event[column])
+            eve_line_event.columns = ['irradiance']
+
+            # Determine dimming depth (if any)
+            depth_path = jedi_config.output_path + 'Depth/'
+            if not os.path.exists(depth_path):
+                os.makedirs(depth_path)
+
+            plt.close('all')
+            depth_percent, depth_time = determine_dimming_depth(eve_line_event,
+                                                                plot_path_filename='{0}Event {1} {2} Depth.png'.format(depth_path, flare_index, column),
+                                                                verbose=jedi_config.verbose, logger=jedi_config.logger)
+
+            jedi_row[column + ' Depth [%]'] = depth_percent  # TODO: Verify that I don't have to pass this back, i.e., this changes the df outside of this function
+            # jedi_row[column + ' Depth Uncertainty [%]'] = depth_uncertainty  # TODO: make determine_dimming_depth return the propagated uncertainty
+            jedi_row[column + ' Depth Time'] = depth_time
+
+            # Determine dimming slope (if any)
+            slope_path = jedi_config.output_path + 'Slope/'
+            if not os.path.exists(slope_path):
+                os.makedirs(slope_path)
+
+            slope_start_time = pd.Timestamp((jedi_config.goes_flare_events['peak_time'][flare_index]).iso)
+            slope_end_time = depth_time
+
+            if (pd.isnull(slope_start_time)) or (pd.isnull(slope_end_time)):
+                if jedi_config.verbose:
+                    jedi_config.logger.warning('Cannot compute slope or duration because slope bounding times NaN.')
+            else:
+                plt.close('all')
+                slope_min, slope_max, slope_mean = determine_dimming_slope(eve_line_event,
+                                                                           earliest_allowed_time=slope_start_time,
+                                                                           latest_allowed_time=slope_end_time,
+                                                                           plot_path_filename='{0}Event {1} {2} Slope.png'.format(slope_path, flare_index, column),
+                                                                           verbose=jedi_config.verbose, logger=jedi_config.logger)
+
+                jedi_row[column + ' Slope Min [%/s]'] = slope_min
+                jedi_row[column + ' Slope Max [%/s]'] = slope_max
+                jedi_row[column + ' Slope Mean [%/s]'] = slope_mean
+                # jedi_row[column + ' Slope Uncertainty [%]'] = slope_uncertainty  # TODO: make determine_dimming_depth return the propagated uncertainty
+                jedi_row[column + ' Slope Start Time'] = slope_start_time
+                jedi_row[column + ' Slope End Time'] = slope_end_time
+
+                # Determine dimming duration (if any)
+                duration_path = jedi_config.output_path + 'Duration/'
+                if not os.path.exists(duration_path):
+                    os.makedirs(duration_path)
+
+                plt.close('all')
+                duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(eve_line_event,
+                                                                                                      earliest_allowed_time=slope_start_time,
+                                                                                                      plot_path_filename='{0}Event {1} {2} Duration.png'.format(duration_path, flare_index, column),
+                                                                                                      verbose=jedi_config.verbose,
+                                                                                                      logger=jedi_config.logger)
+
+                jedi_row[column + ' Duration [s]'] = duration_seconds
+                jedi_row[column + ' Duration Start Time'] = duration_start_time
+                jedi_row[column + ' Duration End Time'] = duration_end_time
+
+            if jedi_config.verbose:
+                jedi_config.logger.info("Event {0} {1} parameterizations complete.".format(flare_index, column))
+
+
+def produce_summary_plot(eve_lines_event, jedi_row, flare_index,
+                         verbose=False, logger=None):
+    """Make a plot of the fitted light curve, annotated with every dimming parameter that could be determined
+
+    Inputs:
+        eve_lines_event [pandas DataFrame]: The (39) EVE extracted emission lines (columns) trimmed in time (rows).
+        jedi_row [pandas DataFrame]:        A ~24k column DataFrame with only a single row.
+        flare_index [int]:                  The identifier for which event in JEDI to process.
+
+    Optional Inputs:
+        verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
+        logger [JpmLogger]: A configured logger from jpm_logger.py. If set to None, will generate a new one.
+                            Default is None.
+
+    Outputs:
+        Creates a .png file on disk for the plot
+
+    Optional Outputs:
+        None
+
+    Example:
+        produce_summary_plot(eve_lines_event, jedi_row, flare_index,
+                             verbose=verbose, logger=logger)
+    """
+    # Prepare the logger for verbose
+    if verbose:
+        if not logger:
+            logger = JpmLogger(filename='loop_light_curve_fit', path='/Users/jmason86/Desktop/')
+    logger.info("Fitting light curves for event {0}.".format(flare_index))
+
+    # Produce a summary plot for each light curve
+    # plt.style.use('jpm-transparent-light')
+    for column in eve_lines_event:
+        eve_line_event = pd.DataFrame(eve_lines_event[column])
+        eve_line_event.columns = ['irradiance']
+
+        ax = eve_line_event['irradiance'].plot(color='black')
+        plt.axhline(linestyle='dashed', color='grey')
+        start_date = eve_line_event.index.values[0]
+        start_date_string = pd.to_datetime(str(start_date))
+        plt.xlabel(start_date_string.strftime('%Y-%m-%d %H:%M:%S'))
+        plt.ylabel('Irradiance [%]')
+        fmtr = dates.DateFormatter("%H:%M:%S")
+        ax.xaxis.set_major_formatter(fmtr)
+        ax.xaxis.set_major_locator(dates.HourLocator())
+        plt.title('Event {0} {1} nm Parameters'.format(flare_index, column))
+
+        if not np.isnan(jedi_row[column + ' Depth [%]']):
+            plt.annotate('', xy=(jedi_row[column + ' Depth Time'], -jedi_row[column + ' Depth [%]']), xycoords='data',
+                         xytext=(jedi_row[column + ' Depth Time'], 0), textcoords='data',
+                         arrowprops=dict(facecolor='limegreen', edgecolor='limegreen', linewidth=2))
+            mid_depth = -jedi_row[column + ' Depth [%]'] / 2.0
+            plt.annotate('{0:.2f} %'.format(jedi_row[column + ' Depth [%]']), xy=(jedi_row[column + ' Depth Time'], mid_depth), xycoords='data',
+                         ha='right', va='center', rotation=90, size=18, color='limegreen')
+
+        if not np.isnan(jedi_row[column + ' Slope Mean [%/s]']):
+            p = plt.plot(eve_line_event[jedi_row[column + ' Slope Start Time']:jedi_row[column + ' Slope End Time']]['irradiance'], c='tomato')
+
+            inverse_str = '$^{-1}$'
+            plt.annotate('slope_min={0} % s{1}'.format(latex_float(jedi_row[column + ' Slope Min [%/s]']), inverse_str),
+                         xy=(0.98, 0.12), xycoords='axes fraction', ha='right',
+                         size=12, color=p[0].get_color())
+            plt.annotate('slope_max={0} % s{1}'.format(latex_float(jedi_row[column + ' Slope Max [%/s]']), inverse_str),
+                         xy=(0.98, 0.08), xycoords='axes fraction', ha='right',
+                         size=12, color=p[0].get_color())
+            plt.annotate('slope_mean={0} % s{1}'.format(latex_float(jedi_row[column + ' Slope Mean [%/s]']), inverse_str),
+                         xy=(0.98, 0.04), xycoords='axes fraction', ha='right',
+                         size=12, color=p[0].get_color())
+
+        if not np.isnan(jedi_row[column + ' Duration [s]']):
+            plt.annotate('', xy=(jedi_row[column + ' Duration Start Time'], 0), xycoords='data',
+                         xytext=(jedi_row[column + ' Duration End Time'], 0), textcoords='data',
+                         arrowprops=dict(facecolor='dodgerblue', edgecolor='dodgerblue', linewidth=5,
+                                         arrowstyle='<->'))
+            mid_time = jedi_row[column + ' Duration Start Time'] + (jedi_row[column + ' Duration End Time'] - jedi_row[column + ' Duration Start Time']) / 2
+            plt.annotate(str(jedi_row[column + ' Duration [s]']) + ' s', xy=(mid_time, 0), xycoords='data', ha='center', va='bottom',
+                         size=18, color='dodgerblue')
+
+        summary_path = jedi_config.output_path + 'Summary Plots/'
+        if not os.path.exists(summary_path):
+            os.makedirs(summary_path)
+        summary_filename = '{0}Event {1} {2} Parameter Summary.png'.format(summary_path, flare_index, column)
+        plt.savefig(summary_filename)
+        plt.close('all')
+
+        if jedi_config.verbose:
+            jedi_config.logger.info("Summary plot saved to %s" % summary_filename)
 
 
 def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
