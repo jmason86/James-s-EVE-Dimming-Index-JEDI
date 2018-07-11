@@ -976,13 +976,13 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
         verbose [bool]:  Set to log the processing messages to console. Default is False.
 
     Outputs:
-        No direct return, but writes a csv to disk with the dimming paramerization results.
+        No direct return, but writes a csv to disk with the dimming parameterization results.
 
     Optional Outputs:
         None
 
     Example:
-        generate_jedi_catalog(output_path='/Users/jmaosn86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
+        generate_jedi_catalog(output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
                               verbose=True)
     """
     # Create one sorted, clean dataframe from all of the csv files
