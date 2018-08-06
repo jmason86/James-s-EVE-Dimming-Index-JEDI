@@ -33,7 +33,9 @@ import jedi_config
 __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
 
-def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
+
+def generate_jedi_catalog(flare_index_range=range(0, 5052),
+                          compute_new_preflare_irradiances=False,
                           threshold_time_prior_flare_minutes=480.0,
                           dimming_window_relative_to_flare_minutes_left=-1.0,
                           dimming_window_relative_to_flare_minutes_right=1440.0,
@@ -43,9 +45,10 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
     """Wrapper code for creating James's Extreme Ultraviolet Variability Experiment (EVE) Dimming Index (JEDI) catalog.
 
     Inputs:
-        None.
+        flare_index_range [range]: The range of GOES flare indices to process. Default is range(0, 5052).
 
     Optional Inputs:
+        compute_new_preflare_irradiances [bool]:                Set to force reprocessing of pre-flare irradiances. Will also occur if preflare file doesn't exist on disk.
         threshold_time_prior_flare_minutes [float]:             How long before a particular event does the last one need to have
                                                                 occurred to be considered independent. If the previous one was too
                                                                 recent, will use that event's pre-flare irradiance.
@@ -63,7 +66,6 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
                                                                 Default is 1440 (24 hours).
         threshold_minimum_dimming_window_minutes [float]:       The smallest allowed time window in which to search for dimming.
                                                                 Default is 120 (2 hours).
-        flare_index_range [range]                               The range of GOES flare indices to process. Default is range(0, 5052).
         output_path [str]:                                      Set to a path for saving the JEDI catalog table and processing
                                                                 summary plots. Default is '/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
         verbose [bool]:                                         Set to log the processing messages to disk and console. Default is False.
@@ -83,6 +85,8 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
     # Force flare_index_range to be an array type so it can be indexed in later code
     if isinstance(flare_index_range, int):
         flare_index_range = np.array([flare_index_range])
+
+    # TODO: Chunk 1: Do this in jedi_config
 
     # Prepare the logger for verbose
     if verbose:
@@ -111,7 +115,6 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
     eve_lines.sort_index(inplace=True)
     eve_lines = eve_lines.drop_duplicates()
 
-
     # Get GOES flare events above C1 within date range corresponding to EVE data
     # flares = get_goes_flare_events(eve_lines.index[0], eve_lines.index[-1], verbose=verbose)  # TODO: The method in sunpy needs fixing, issue 2434
 
@@ -125,6 +128,8 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
     if verbose:
         logger.info('Loaded GOES flare events.')
 
+    # TODO: End Chunk 1: Stuff in jedi_config
+
     # Define the columns of the JEDI catalog
     jedi_row = init_jedi_row(eve_lines, jedi_config.jedi_csv_filename)
 
@@ -136,9 +141,21 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
     #progress_bar = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Flare event loop: ')] + widgets,
     #                                       min_value=flare_index_range[0], max_value=flare_index_range[-1]).start()
 
-    # Prepare a hold-over pre-flare irradiance value,
-    # which will normally have one element for each of the 39 emission lines
-    preflare_irradiance = np.nan
+    # Compute all pre-flare irradiances if needed or because kwarg set
+    preflare_irradiance_filename = output_path + 'Processed Pre-Flare Irradiances/preflare_irradiances.csv'
+    os.makedirs(os.path.dirname(preflare_irradiance_filename), exist_ok=True)  # Create folder if it doesn't exist already
+    if compute_new_preflare_irradiances or (os.path.isfile(preflare_irradiance_filename) is False):
+        logger.info('Recomputing pre-flare irradiances.')
+        preflare_irradiances, \
+            preflare_windows_start, \
+            preflare_windows_end = determine_preflare_irradiance.multiprocess_preflare_irradiance(preflare_indices,
+                                                                                                  nworkers=5,
+                                                                                                  verbose=verbose,
+                                                                                                  logger=logger)
+        preflare_df = pd.DataFrame(columns=[preflare_irradiances, preflare_windows_start, preflare_windows_end])
+        preflare_df.to_csv(preflare_irradiance_filename, index=False, mode='w')
+    else:
+        preflare_df = pd.read_csv(preflare_irradiance_filename, index_col=None, low_memory=False)  # TODO: is index_col=None right?
 
     # Start loop through all flares
     for flare_index in flare_index_range:
@@ -148,7 +165,7 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
         if flare_index == 0:
             continue
 
-        print('Running on event {0}'.format(flare_index))
+        logger.info('Running on event {0}'.format(flare_index))
 
         # Reset jedi_row
         jedi_row[:] = np.nan
@@ -168,40 +185,10 @@ def generate_jedi_catalog(flare_index_range,  # =range(0, 5052),
         processed_jedi_non_params_filename = output_path + 'Processed Pre-Parameterization Data/Event {0} Pre-Parameterization.h5'.format(flare_index)
         processed_lines_filename = output_path + 'Processed Lines Data/Event {0} Lines.h5'.format(flare_index)
         if not os.path.isfile(processed_lines_filename) or not os.path.isfile(processed_jedi_non_params_filename):
-            # Determine pre-flare irradiance
-            minutes_since_last_flare = (goes_flare_events['peak_time'][flare_index] - goes_flare_events['peak_time'][flare_index - 1]).sec / 60.0
-            if minutes_since_last_flare > threshold_time_prior_flare_minutes:
-                # Clip EVE data from threshold_time_prior_flare_minutes prior to flare up to peak flare time
-                preflare_window_start = (goes_flare_events['peak_time'][flare_index] - (threshold_time_prior_flare_minutes * u.minute)).iso
-                preflare_window_end = (goes_flare_events['peak_time'][flare_index]).iso
-                eve_lines_preflare_time = eve_lines[preflare_window_start:preflare_window_end]
-
-                # Loop through the emission lines and get pre-flare irradiance for each
-                preflare_irradiance = []
-                for column in eve_lines_preflare_time:
-                    eve_line_preflare_time = pd.DataFrame(eve_lines_preflare_time[column])
-                    eve_line_preflare_time.columns = ['irradiance']
-                    preflare_irradiance.append(determine_preflare_irradiance(eve_line_preflare_time,
-                                                                             pd.Timestamp(goes_flare_events['start_time'][flare_index].iso),
-                                                                             plot_path_filename=output_path + 'Preflare Determination/Event {0} {1}.png'.format(flare_index, column),
-                                                                             verbose=verbose, logger=logger))
-                    plt.close('all')
-            else:
-                logger.info("This flare at {0} will use the pre-flare irradiance from flare at {1}."
-                            .format(goes_flare_events['peak_time'][flare_index].iso,
-                                    goes_flare_events['peak_time'][flare_index - 1].iso))
-
-            # Make sure there is a preflare_window_start defined. If not, user probably needs to start from an earlier event.
-            if 'preflare_window_start' not in locals():
-                print('ERROR: You need to start from an earlier event. Detected flare interrupt so need earlier pre-flare value.')
-                logger.error('ERROR: You need to start from an earlier event. Detected flare interrupt so need earlier pre-flare value.')
-                print('Moving to next event instead.')
-                continue
-
-            jedi_row["Pre-Flare Start Time"] = preflare_window_start
-            jedi_row["Pre-Flare End Time"] = preflare_window_end
+            jedi_row["Pre-Flare Start Time"] = preflare_df['preflare_windows_start'].iloc[map_flare_index_to_preflare_index(flare_index)]
+            jedi_row["Pre-Flare End Time"] = preflare_df['preflare_windows_end'].iloc[map_flare_index_to_preflare_index(flare_index)]
             preflare_irradiance_cols = [col for col in jedi_row.columns if 'Pre-Flare Irradiance' in col]
-            jedi_row[preflare_irradiance_cols] = preflare_irradiance
+            jedi_row[preflare_irradiance_cols] = preflare_df['preflare_irradiance'].iloc[map_flare_index_to_preflare_index(flare_index)]  # TODO: Is n_element preflare_irradiance handled right here?
 
             if verbose:
                 logger.info("Event {0} pre-flare determination complete.".format(flare_index))
@@ -534,10 +521,8 @@ def init_jedi_row(eve_lines, jedi_csv_filename):
 
     return jedi_row
 
-def map_preflare_index_to_flare_index(is_independent_flare):
+def map_flare_index_to_preflare_index(flare_index):
     """Internal-use function for translating the <5k preflare_indices to the ~5k flare_indices
-    Given a mask of True/False values and an array of indices, create a new array of same size,
-    with the index of the nearest preceding True value.
     Why?
     When flares occur close together in time, they can't be considered independent. In these cases, the pre-flare
     irradiance for flare #2 can't be computed because flare #1 was still in progress. Instead, we use the pre-flare
@@ -550,7 +535,7 @@ def map_preflare_index_to_flare_index(is_independent_flare):
     processed just a single time to speed up code execution.
 
     Inputs:
-        is_independent_flare [logical numpy array]: False wherever we need the location of the nearest preceding True.
+        flare_index [int]: The event identifier from the main loop.
 
     Optional Inputs:
         None
@@ -562,17 +547,15 @@ def map_preflare_index_to_flare_index(is_independent_flare):
         None
 
     Example:
-        is_independent_flare = all_minutes_since_last_flare > jedi_config.threshold_time_prior_flare_minutes
-            yields something like: np.array([1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0])
-        preflare_map_indices = map_preflare_index_to_flare_index(is_independent_flare)
-            returns: np.array([0, 0, 0, 3, 4, 5, 5, 7])
+        preflare_index = map_flare_index_to_preflare_index(flare_index)
     """
+    is_independent_flare = jedi_config.all_minutes_since_last_flare > jedi_config.threshold_time_prior_flare_minutes
     irange = range(is_independent_flare)
     invalid_index = -1
     idx = np.where(is_independent_flare)[0]
     sidx = np.searchsorted(idx, irange, 'right')-1
     preflare_map_indices = np.where(sidx == -1, invalid_index, idx[sidx])
-    return preflare_map_indices
+    return preflare_map_indices[flare_index]
 
 def clip_eve_data_to_dimming_window(flare_index,
                                     verbose=False, logger=None):

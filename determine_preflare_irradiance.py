@@ -252,15 +252,15 @@ def get_preflare_irradiance_all_emission_lines(flare_index,
     return preflare_irradiance, preflare_window_start, preflare_window_end
 
 
-def multiprocess_preflare_irradiance(preflare_indices, nworkers,
-                                     verbose=False, logger=None):
+def multiprocess_preflare_irradiance(preflare_indices,
+                                     nworkers=2, verbose=False, logger=None):
     """Multi-threaded processing of pre-flare irradiance across time-independent flares
 
         Inputs:
             preflare_indices [np int array]: The subset of flare_indices that correspond to time-independent flares.
-            nworkers [int]:                  The number of parallel threads to use.
 
         Optional Inputs:
+            nworkers [int]:     The number of parallel threads to use. Default is 2.
             verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
             logger [JpmLogger]: A configured logger from jpm_logger.py. If set to None, will generate a new one.
                                 Default is None.
@@ -292,7 +292,7 @@ def multiprocess_preflare_irradiance(preflare_indices, nworkers,
         logger.info('Pool closed. Preparing export of dataframe')
 
     preflare_irradiances = np.array(preflare_irradiances)
-    preflare_windows_start = preflare_windows_start
-    preflare_windows_end = preflare_windows_end
+    preflare_windows_start = preflare_windows_start  # TODO: Should this be np.array()?
+    preflare_windows_end = preflare_windows_end  # TODO: Should this be np.array()?
 
     return preflare_irradiances, preflare_windows_start, preflare_windows_end

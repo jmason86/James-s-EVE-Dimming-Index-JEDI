@@ -34,12 +34,12 @@ jedi_df = None
 
 def init():
 
-    global eve_lines, goes_flare_events, logger, jedi_csv_filename, preflare_hdf_filename
+    global eve_lines, goes_flare_events, logger, jedi_csv_filename, preflare_hdf_filename, all_minutes_since_last_flare
+
+    logger = JpmLogger(filename=logger_filename, path=output_path, console=False)
 
     jedi_csv_filename = output_path + 'jedi_{0}.csv'.format(Time.now().iso)
     preflare_hdf_filename = os.path.join(output_path, 'preflare_df.hdf5')
-
-    logger = JpmLogger(filename=logger_filename, path=output_path, console=False)
 
     eve_readsav = readsav(eve_data_path)
 
@@ -67,6 +67,9 @@ def init():
     goes_flare_events['start_time'] = Time(goes_flare_events['event_start_time_jd'], format='jd', scale='utc')
     #t = pd.to_datetime(goes_flare_events['event_start_time_jd'], unit='D', origin='julian')
 
+    # Compute the amount of time between all flares [minutes]
+    peak_time = goes_flare_events['peak_time']
+    all_minutes_since_last_flare = (peak_time[1:] - peak_time[0:-1]).sec / 60.0
 
 def make_jedi_df():
 
@@ -123,8 +126,6 @@ def make_jedi_df():
     jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Fitting Gamma'))
     jedi_df = jedi_df.join(pd.DataFrame(columns=ion_permutations + ' Fitting Score'))
 
-    # See discussion on how to populate this efficiently at given index / columns:
-    # https://stackoverflow.com/questions/13842088/set-value-for-particular-cell-in-pandas-dataframe-using-index
 
 
 
