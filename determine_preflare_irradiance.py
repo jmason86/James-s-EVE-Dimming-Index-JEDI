@@ -1,4 +1,5 @@
 # Standard modules
+import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -6,7 +7,6 @@ import multiprocessing as mp
 import astropy.units as u
 
 # Custom modules
-from jpm_logger import JpmLogger
 from jpm_number_printing import latex_float
 
 # Configuration
@@ -18,7 +18,7 @@ __contact__ = 'jmason86@gmail.com'
 
 def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
                                   max_median_diff_threshold=1.5, std_threshold=1.0,
-                                  plot_path_filename=None, verbose=False, logger=None):
+                                  plot_path_filename=None, verbose=False):
     """Determine pre-flare irradiance level in a solar light curve.
     Or, more generally, find the pre-peak level in a time series.
 
@@ -36,8 +36,6 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
         plot_path_filename [str]:          Set to a path and filename in order to save the summary plot to disk.
                                            Default is None, meaning the plot will not be saved to disk.
         verbose [bool]:                    Set to log the processing messages to disk and console. Default is False.
-        logger [JpmLogger]:                A configured logger from jpm_logger.py. If set to None, will generate a
-                                           new one. Default is None.
 
     Outputs:
         preflare_irradiance [float]: The identified pre-flare irradiance level in the same units as light_curve_df.irradiance.
@@ -52,14 +50,12 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
     """
     # Prepare the logger for verbose
     if verbose:
-        if not logger:
-            logger = JpmLogger(filename='determine_preflare_irradiance_log', path='/Users/jmason86/Desktop/')
-        logger.info("Running on event with peak start time of {0}.".format(estimated_time_of_peak_start))
+        jedi_config.logger.info("Running on event with peak start time of {0}.".format(estimated_time_of_peak_start))
 
     # Verify that not all values are nan
     if light_curve_df.isna().all().all():
         if verbose:
-            logger.warning("All irradiance values are NaN. Returning.")
+            jedi_config.logger.warning("All irradiance values are NaN. Returning.")
         return np.nan
 
     # Convert irradiance to percent if not already present
@@ -67,19 +63,19 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
         median_irradiance = light_curve_df['irradiance'].median()
         light_curve_df['irradiance_percent'] = (light_curve_df['irradiance'].values - median_irradiance) / median_irradiance * 100.
         if verbose:
-            logger.info("Converted irradiance to percent, baselining median in entire pre-flare window.")
+            jedi_config.logger.info("Converted irradiance to percent, baselining median in entire pre-flare window.")
 
     # Divide the pre-flare period into 3 equal-length windows
     windows = np.array_split(light_curve_df[:estimated_time_of_peak_start], 3)
     if verbose:
-        logger.info("Divided pre-flare period into 3 equal-length windows.")
+        jedi_config.logger.info("Divided pre-flare period into 3 equal-length windows.")
 
     # Compute median and σ in each window
     medians = [windowed_df['irradiance_percent'].median() for windowed_df in windows]
     medians_abs = [windowed_df['irradiance'].median() for windowed_df in windows]
     stds = np.array([windowed_df['irradiance_percent'].std() for windowed_df in windows])
     if verbose:
-        logger.info("Computed medians and standard deviations in each window.")
+        jedi_config.logger.info("Computed medians and standard deviations in each window.")
 
     # Compute max difference between the medians
     max_median_diff = np.max(np.abs(np.append(np.diff(medians), medians[2] - medians[0])))
@@ -89,17 +85,17 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
     failed_std_threshold = False
     if np.all(np.isnan(stds)):
         if verbose:
-            logger.warning('Cannot compute pre-flare irradiance. All standard deviations are nan.')
+            jedi_config.logger.warning('Cannot compute pre-flare irradiance. All standard deviations are nan.')
         failed_std_threshold = True
     else:
         if max_median_diff > max_median_diff_threshold * np.mean(stds):
             if verbose:
-                logger.warning(
+                jedi_config.logger.warning(
                     'Cannot compute pre-flare irradiance. Maximum difference in window medians ({0}) exceeded threshold ({1}).'.format(max_median_diff, max_median_diff_threshold * np.mean(stds)))
             failed_median_threshold = True
         if (stds < std_threshold).sum() < 2:
             if verbose:
-                logger.warning('Cannot compute pre-flare irradiance. Standard deviation in more than 1 window is larger than threshold ({0}).'.format(std_threshold))
+                jedi_config.logger.warning('Cannot compute pre-flare irradiance. Standard deviation in more than 1 window is larger than threshold ({0}).'.format(std_threshold))
             failed_std_threshold = True
 
     # Compute pre-flare irradiance (mean of the medians in absolute units)
@@ -108,13 +104,15 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
     else:
         preflare_irradiance = np.mean([windowed_df['irradiance'].median() for windowed_df in windows])
         if verbose:
-            logger.info("Computed pre-flare irradiance: {0}".format(preflare_irradiance))
+            jedi_config.logger.info("Computed pre-flare irradiance: {0}".format(preflare_irradiance))
 
     # Produce summary plot
     if plot_path_filename:
         plt.style.use('jpm-transparent-light')
         from matplotlib import dates
         from matplotlib.patches import Rectangle
+
+        plt.close('all')
 
         light_curve_df = light_curve_df.drop('irradiance_percent', 1)
         ax = light_curve_df[:estimated_time_of_peak_start].plot(legend=False, c='grey')
@@ -195,13 +193,13 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
 
         plt.savefig(plot_path_filename)
         if verbose:
-            logger.info("Summary plot for event with start time {0} saved to {1}".format(estimated_time_of_peak_start, plot_path_filename))
+            jedi_config.logger.info("Summary plot for event with start time {0} saved to {1}".format(estimated_time_of_peak_start, plot_path_filename))
 
     return preflare_irradiance
 
 
 def get_preflare_irradiance_all_emission_lines(flare_index,
-                             verbose=False, logger=None):
+                             verbose=False):
     """Loop through all (39) of the EVE extracted emission lines and get the pre-flare irradiance for each
 
         Inputs:
@@ -209,8 +207,6 @@ def get_preflare_irradiance_all_emission_lines(flare_index,
 
         Optional Inputs:
             verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
-            logger [JpmLogger]: A configured logger from jpm_logger.py. If set to None, will generate a new one.
-                                Default is None.
 
         Outputs:
             preflare_irradiance [float]: The identified pre-flare irradiance level in the same units as light_curve_df.irradiance.
@@ -222,13 +218,10 @@ def get_preflare_irradiance_all_emission_lines(flare_index,
 
         Example:
             preflare_irradiance, preflare_window_start, preflare_window_end = get_preflare_irradiance_all_emission_lines(flare_index,
-                                                                                                       verbose=verbose, logger=logger)
+                                                                                                       verbose=verbose)
     """
-    # Prepare the logger for verbose
     if verbose:
-        if not logger:
-            logger = JpmLogger(filename='determine_preflare_irradiance_log', path='/Users/jmason86/Desktop/')
-        logger.info("Running on event {0}.".format(flare_index))
+        jedi_config.logger.info("Running on event {0}.".format(flare_index))
 
     # Clip EVE data from threshold_time_prior_flare_minutes prior to flare up to peak flare time
     preflare_window_start = (jedi_config.goes_flare_events['peak_time'][flare_index] - (jedi_config.threshold_time_prior_flare_minutes * u.minute)).iso
@@ -243,9 +236,8 @@ def get_preflare_irradiance_all_emission_lines(flare_index,
 
         preflare_temp = determine_preflare_irradiance(eve_line_preflare_time,
                                                       pd.Timestamp(jedi_config.goes_flare_events['start_time'][flare_index].iso),
-                                                      plot_path_filename=os.path.join(jedi_config.output_path, 'Preflare_Determination', 'Event_%d_%s.png' % (flare_index, column)),
-                                                      verbose=jedi_config.verbose,
-                                                      logger=jedi_config.logger)
+                                                      plot_path_filename=os.path.join(jedi_config.output_path, 'Preflare Determination', 'Event_%d_%s.png' % (flare_index, column)),
+                                                      verbose=jedi_config.verbose)
 
         preflare_irradiance.append(preflare_temp)
 
@@ -253,7 +245,7 @@ def get_preflare_irradiance_all_emission_lines(flare_index,
 
 
 def multiprocess_preflare_irradiance(preflare_indices,
-                                     nworkers=2, verbose=False, logger=None):
+                                     nworkers=2, verbose=False):
     """Multi-threaded processing of pre-flare irradiance across time-independent flares
 
         Inputs:
@@ -262,8 +254,6 @@ def multiprocess_preflare_irradiance(preflare_indices,
         Optional Inputs:
             nworkers [int]:     The number of parallel threads to use. Default is 2.
             verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
-            logger [JpmLogger]: A configured logger from jpm_logger.py. If set to None, will generate a new one.
-                                Default is None.
 
         Outputs:
             preflare_irradiance [float]: The identified pre-flare irradiance level in the same units as light_curve_df.irradiance.
@@ -276,20 +266,17 @@ def multiprocess_preflare_irradiance(preflare_indices,
         Example:
             preflare_irradiance, preflare_window_start, preflare_window_end = multiprocess_preflare_irradiance(preflare_indices, 4)
     """
-    # Prepare the logger for verbose
     if verbose:
-        if not logger:
-            logger = JpmLogger(filename='determine_preflare_irradiance_log', path='/Users/jmason86/Desktop/')
-        logger.info("Running on {0} events with {1} threads.".format(len(preflare_indices), nworkers))
+        jedi_config.logger.info("Running on {0} events with {1} threads.".format(len(preflare_indices), nworkers))
 
     if nworkers == 1:
         preflare_irradiances, preflare_windows_start, preflare_windows_end = zip(*map(get_preflare_irradiance_all_emission_lines, preflare_indices))
-        logger.info('Preparing export of dataframe')
+        jedi_config.logger.info('Preparing export of dataframe.')
     else:
         pool = mp.Pool(processes=nworkers)
         preflare_irradiances, preflare_windows_start, preflare_windows_end = zip(*pool.map(get_preflare_irradiance_all_emission_lines, preflare_indices))
         pool.close()
-        logger.info('Pool closed. Preparing export of dataframe')
+        jedi_config.logger.info('Pool closed. Preparing export of dataframe.')
 
     preflare_irradiances = np.array(preflare_irradiances)
     preflare_windows_start = preflare_windows_start  # TODO: Should this be np.array()?

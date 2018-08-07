@@ -10,14 +10,14 @@ from sklearn.svm import SVR
 # Custom modules
 from jpm_time_conversions import metatimes_to_seconds_since_start, datetimeindex_to_human
 from jpm_number_printing import latex_float
-from jpm_logger import JpmLogger
+import jedi_config
 
 __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
 
 
 def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10), minimum_score=0.5,
-                    plots_save_path=None, verbose=False, logger=None):
+                    plots_save_path=None, verbose=False):
     """Automatically fit the best support vector machine regression (SVR) model for the input light curve.
 
     Inputs:
@@ -36,8 +36,6 @@ def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10),
         plots_save_path [str]: Set to a path in order to save the validation curve and best fit overplot on the data to disk.
                                Default is None, meaning no plots will be saved to disk.
         verbose [bool]:        Set to log the processing messages to disk and console. Default is False.
-        logger [JpmLogger]:    A configured logger from jpm_logger.py. If set to None, will generate a
-                               new one. Default is None.
 
     Outputs:
         light_curve_fit_df [pd DataFrame]: A pandas DataFrame with a DatetimeIndex, and columns for fitted irradiance and uncertainty.
@@ -50,12 +48,8 @@ def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10),
     Example:
         light_curve_fit_df, best_fit_gamma, best_fit_score = light_curve_fit(light_curve_df, verbose=True)
     """
-
-    # Prepare the logger for verbose
     if verbose:
-        if not logger:
-            logger = JpmLogger(filename='automatic_fit_light_curve_log', path='/Users/jmason86/Desktop/')
-        logger.info("Running on event with light curve start time of {0}.".format(light_curve_df.index[0]))
+        jedi_config.logger.info("Running on event with light curve start time of {0}.".format(light_curve_df.index[0]))
 
     # Pull data out of the DataFrame for compatibility formatting
     X = metatimes_to_seconds_since_start(light_curve_df.index)
@@ -64,7 +58,7 @@ def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10),
     # Check for NaNs and issue warning that they are being removed from the dataset
     if verbose:
         if np.isnan(y).any():
-            logger.warning("There are NaN values in light curve. Dropping them.")
+            jedi_config.logger.warning("There are NaN values in light curve. Dropping them.")
     finite_irradiance_indices = np.isfinite(y)
     X = X[finite_irradiance_indices]
     X = X.reshape(len(X), 1)  # Format to be compatible with validation_curve and SVR.fit()
@@ -72,7 +66,7 @@ def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10),
     y = y[finite_irradiance_indices]
 
     if verbose:
-        logger.info("Fitting %s points." % len(y))
+        jedi_config.logger.info("Fitting %s points." % len(y))
 
     # Helper function for compatibility with validation_curve
     def jpm_svr(gamma=1e-6, **kwargs):
@@ -91,16 +85,16 @@ def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10),
                                               gamma, cv=shuffle_split, scoring=evs)
 
     if verbose:
-        logger.info("Validation curve complete.")
+        jedi_config.logger.info("Validation curve complete.")
 
     # Identify the best score
     scores = np.median(val_score, axis=1)
     best_fit_score = np.max(scores)
     best_fit_gamma = gamma[np.argmax(scores)]
     if verbose:
-        logger.info('Scores: ' + str(scores))
-        logger.info('Best score: ' + str(best_fit_score))
-        logger.info('Best fit gamma: ' + str(best_fit_gamma))
+        jedi_config.logger.info('Scores: ' + str(scores))
+        jedi_config.logger.info('Best score: ' + str(best_fit_score))
+        jedi_config.logger.info('Best fit gamma: ' + str(best_fit_gamma))
 
     if plots_save_path and np.size(gamma) > 1:
         plt.clf()
@@ -121,12 +115,12 @@ def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10),
         filename = plots_save_path + 'Validation Curve t0 ' + datetimeindex_to_human(light_curve_df.index)[0] + '.png'
         plt.savefig(filename)
         if verbose:
-            logger.info("Validation curve saved to %s" % filename)
+            jedi_config.logger.info("Validation curve saved to %s" % filename)
 
     # Return np.nan if only got bad fits
     if best_fit_score < minimum_score:
         if verbose:
-            logger.warning("Uh oh. Best fit score {0:.2f} is < user-defined minimum score {1:.2f}".format(best_fit_score, minimum_score))
+            jedi_config.logger.warning("Uh oh. Best fit score {0:.2f} is < user-defined minimum score {1:.2f}".format(best_fit_score, minimum_score))
         return np.nan, best_fit_gamma, best_fit_score
 
     # Otherwise train and fit the best model
@@ -135,7 +129,7 @@ def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10),
     y_fit = model.predict(X)
 
     if verbose:
-        logger.info("Best model trained and fitted.")
+        jedi_config.logger.info("Best model trained and fitted.")
 
     if plots_save_path:
         plt.clf()
@@ -151,7 +145,7 @@ def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10),
         filename = plots_save_path + 'Fit t0 ' + datetimeindex_to_human(light_curve_df.index)[0] + '.png'
         plt.savefig(filename)
         if verbose:
-            logger.info("Fitted curve saved to %s" % filename)
+            jedi_config.logger.info("Fitted curve saved to %s" % filename)
 
     # TODO: Get uncertainty of fit at each point... if that's even possible
     # Placeholder for now just so that the function can complete: output uncertainty = input uncertainty
@@ -162,6 +156,6 @@ def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10),
                                        'uncertainty': fit_uncertainty})
     light_curve_fit_df.index = light_curve_df.index[finite_irradiance_indices]
     if verbose:
-        logger.info("Created output DataFrame")
+        jedi_config.logger.info("Created output DataFrame")
 
     return light_curve_fit_df, best_fit_gamma, best_fit_score

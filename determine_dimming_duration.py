@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Custom modules
-from jpm_logger import JpmLogger
+import jedi_config
 
 __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
@@ -12,7 +12,7 @@ __contact__ = 'jmason86@gmail.com'
 
 def determine_dimming_duration(light_curve_df,
                                earliest_allowed_time=None, smooth_points=0,
-                               plot_path_filename=None, verbose=False, logger=None):
+                               plot_path_filename=None, verbose=False):
     """Find the duration of dimming in a light curve, if any.
     Assumes light curve is normalized such that pre-flare = 0%.
 
@@ -27,8 +27,6 @@ def determine_dimming_duration(light_curve_df,
         plot_path_filename [str]:         Set to a path and filename in order to save the summary plot to disk.
                                           Default is None, meaning the plot will not be saved to disk.
         verbose [bool]:                   Set to log the processing messages to disk and console. Default is False.
-        logger [JpmLogger]:               A configured logger from jpm_logger.py. If set to None, will generate a
-                                          new one. Default is None.
 
     Outputs:
         duration_seconds [integer]:         The duration of dimming in seconds.
@@ -43,16 +41,12 @@ def determine_dimming_duration(light_curve_df,
                                                                                               plot_path_filename='./bla.png',
                                                                                               verbose=True)
     """
-
     # If no earliest_allowed_time set, then set it to beginning of light_curve_df
     if not earliest_allowed_time:
         earliest_allowed_time = pd.Timestamp(light_curve_df.index.values[0])
 
-    # Prepare the logger for verbose
     if verbose:
-        if not logger:
-            logger = JpmLogger(filename='determine_dimming_duration_log', path='/Users/jmason86/Desktop/')
-        logger.info("Running on event with light curve start time of {0}.".format(light_curve_df.index[0]))
+        jedi_config.logger.info("Running on event with light curve start time of {0}.".format(light_curve_df.index[0]))
 
     # Set up a successful processing flag
     found_duration = True
@@ -75,7 +69,7 @@ def determine_dimming_duration(light_curve_df,
     zero_crossing_indices = zero_crossing_indices[zero_crossing_times > earliest_allowed_time]
     if zero_crossing_indices.size == 0:
         if verbose:
-            logger.warning('No zero crossings detected after earliest allowed time of %s' % earliest_allowed_time)
+            jedi_config.logger.warning('No zero crossings detected after earliest allowed time of %s' % earliest_allowed_time)
         found_duration = False
 
     # Figure out which way the light curve is sloping
@@ -90,7 +84,7 @@ def determine_dimming_duration(light_curve_df,
             first_neg_zero_crossing_time = light_curve_df.index[zero_crossing_indices[first_neg_zero_crossing_index]]
         else:
             if verbose:
-                logger.warning('No negative slope 0-crossing found. Duration cannot be defined.')
+                jedi_config.logger.warning('No negative slope 0-crossing found. Duration cannot be defined.')
             found_duration = False
 
     # Find the first postiive slope zero crossing
@@ -101,13 +95,13 @@ def determine_dimming_duration(light_curve_df,
             first_pos_zero_crossing_time = light_curve_df.index[zero_crossing_indices[first_pos_zero_crossing_index]]
         else:
             if verbose:
-                logger.warning('No positive slope 0-crossing found. Duration cannot be defined.')
+                jedi_config.logger.warning('No positive slope 0-crossing found. Duration cannot be defined.')
             found_duration = False
 
     # If the first negative slope zero crossing isn't earlier than the positive one, return null
     if (found_duration) and (first_neg_zero_crossing_time > first_pos_zero_crossing_time):
         if verbose:
-            logger.warning('Dimming light curve may be misaligned in window. Negative slope 0-crossing detected after positive one.')
+            jedi_config.logger.warning('Dimming light curve may be misaligned in window. Negative slope 0-crossing detected after positive one.')
         found_duration = False
 
     # Return the time difference in seconds between the selected zero crossings
@@ -144,7 +138,7 @@ def determine_dimming_duration(light_curve_df,
 
         plt.savefig(plot_path_filename)
         if verbose:
-            logger.info("Summary plot saved to %s" % plot_path_filename)
+            jedi_config.logger.info("Summary plot saved to %s" % plot_path_filename)
 
     if not found_duration:
         duration_seconds = np.nan
