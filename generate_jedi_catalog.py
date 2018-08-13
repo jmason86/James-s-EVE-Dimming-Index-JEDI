@@ -100,19 +100,19 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
     #                                       min_value=flare_index_range[0], max_value=flare_index_range[-1]).start()
 
     # Compute all pre-flare irradiances if needed or because kwarg set
-    preflare_irradiance_filename = output_path + 'Processed Pre-Flare Irradiances/preflare_irradiances.csv'
-    os.makedirs(os.path.dirname(preflare_irradiance_filename), exist_ok=True)  # Create folder if it doesn't exist already
-    if compute_new_preflare_irradiances or (os.path.isfile(preflare_irradiance_filename) is False):
+    if compute_new_preflare_irradiances or (os.path.isfile(jedi_config.preflare_hdf_filename) is False):
         jedi_config.logger.info('Recomputing pre-flare irradiances.')
         preflare_irradiances, \
             preflare_windows_start, \
             preflare_windows_end = multiprocess_preflare_irradiance(jedi_config.preflare_indices,
-                                                                    nworkers=5,
+                                                                    nworkers=7,
                                                                     verbose=verbose)
+        jedi_config.logger.info('Finished processing pre-flare irradiances. Writing them to disk.')
         preflare_df = pd.DataFrame(columns=[preflare_irradiances, preflare_windows_start, preflare_windows_end])
-        preflare_df.to_csv(preflare_irradiance_filename, index=False, mode='w')
+        preflare_df.to_hdf(jedi_config.preflare_hdf_filename, key='preflare_df', mode='w')
+        jedi_config.logger.info('Finished writing pre-flare irradiances to disk.')
     else:
-        preflare_df = pd.read_csv(preflare_irradiance_filename, index_col=None, low_memory=False)  # TODO: is index_col=None right?
+        preflare_df = pd.read_hdf(jedi_config.preflare_hdf_filename, index_col=None, low_memory=False)  # TODO: is index_col=None right?
 
     # Start loop through all flares
     for flare_index in flare_index_range:
