@@ -236,7 +236,7 @@ def get_preflare_irradiance_all_emission_lines(flare_index,
 
         preflare_temp = determine_preflare_irradiance(eve_line_preflare_time,
                                                       pd.Timestamp(jedi_config.goes_flare_events['start_time'][flare_index].iso),
-                                                      plot_path_filename=os.path.join(jedi_config.output_path, 'Preflare Determination', 'Event_%d_%s.png' % (flare_index, column)),
+                                                      plot_path_filename=os.path.join(jedi_config.output_path, 'Preflare Determination', 'Event %d %s.png' % (flare_index, column)),
                                                       verbose=jedi_config.verbose)
 
         preflare_irradiance.append(preflare_temp)
@@ -252,8 +252,8 @@ def multiprocess_preflare_irradiance(preflare_indices,
             preflare_indices [np int array]: The subset of flare_indices that correspond to time-independent flares.
 
         Optional Inputs:
-            nworkers [int]:     The number of parallel threads to use. Default is 2.
-            verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
+            nworkers [int]: The number of parallel threads to use. Default is 2.
+            verbose [bool]: Set to log the processing messages to disk and console. Default is False.
 
         Outputs:
             preflare_irradiance [float]: The identified pre-flare irradiance level in the same units as light_curve_df.irradiance.
