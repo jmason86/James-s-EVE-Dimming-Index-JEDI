@@ -114,10 +114,10 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
         preflare_irradiance_column_names = jedi_config.eve_lines.columns + ' Pre-Flare Irradiance [W/m2]'
         preflare_df = preflare_df.join(pd.DataFrame(columns=preflare_irradiance_column_names))
         preflare_df[preflare_irradiance_column_names] = preflare_irradiances
-        preflare_df.to_hdf(jedi_config.preflare_csv_filename, index=None, mode='w')
+        preflare_df.to_csv(jedi_config.preflare_csv_filename, index=None, mode='w')
         jedi_config.logger.info('Finished writing pre-flare irradiances to disk.')
     else:
-        preflare_df = pd.read_hdf(jedi_config.preflare_csv_filename, index_col=None)
+        preflare_df = pd.read_csv(jedi_config.preflare_csv_filename, index_col=None)
 
     # Start loop through all flares
     for flare_index in flare_index_range:
