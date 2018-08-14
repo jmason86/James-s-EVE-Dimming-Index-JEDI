@@ -100,19 +100,24 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
     #                                       min_value=flare_index_range[0], max_value=flare_index_range[-1]).start()
 
     # Compute all pre-flare irradiances if needed or because kwarg set
-    if compute_new_preflare_irradiances or (os.path.isfile(jedi_config.preflare_hdf_filename) is False):
+    if compute_new_preflare_irradiances or (os.path.isfile(jedi_config.preflare_csv_filename) is False):
         jedi_config.logger.info('Recomputing pre-flare irradiances.')
         preflare_irradiances, \
             preflare_windows_start, \
             preflare_windows_end = multiprocess_preflare_irradiance(jedi_config.preflare_indices,
-                                                                    nworkers=7,
+                                                                    nworkers=6,
                                                                     verbose=verbose)
         jedi_config.logger.info('Finished processing pre-flare irradiances. Writing them to disk.')
-        preflare_df = pd.DataFrame(columns=[preflare_irradiances, preflare_windows_start, preflare_windows_end])
-        preflare_df.to_hdf(jedi_config.preflare_hdf_filename, key='preflare_df', mode='w')
+        preflare_df = pd.DataFrame()
+        preflare_df['Pre-Flare Start Time'] = preflare_windows_start
+        preflare_df['Pre-Flare End Time'] = preflare_windows_end
+        preflare_irradiance_column_names = jedi_config.eve_lines.columns + ' Pre-Flare Irradiance [W/m2]'
+        preflare_df = preflare_df.join(pd.DataFrame(columns=preflare_irradiance_column_names))
+        preflare_df[preflare_irradiance_column_names] = preflare_irradiances
+        preflare_df.to_hdf(jedi_config.preflare_csv_filename, index=None, mode='w')
         jedi_config.logger.info('Finished writing pre-flare irradiances to disk.')
     else:
-        preflare_df = pd.read_hdf(jedi_config.preflare_hdf_filename, index_col=None, low_memory=False)  # TODO: is index_col=None right?
+        preflare_df = pd.read_hdf(jedi_config.preflare_csv_filename, index_col=None)
 
     # Start loop through all flares
     for flare_index in flare_index_range:
@@ -142,8 +147,8 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
         processed_jedi_non_params_filename = output_path + 'Processed Pre-Parameterization Data/Event {0} Pre-Parameterization.h5'.format(flare_index)
         processed_lines_filename = output_path + 'Processed Lines Data/Event {0} Lines.h5'.format(flare_index)
         if not os.path.isfile(processed_lines_filename) or not os.path.isfile(processed_jedi_non_params_filename):
-            jedi_row["Pre-Flare Start Time"] = preflare_df['preflare_windows_start'].iloc[map_flare_index_to_preflare_index(flare_index)]
-            jedi_row["Pre-Flare End Time"] = preflare_df['preflare_windows_end'].iloc[map_flare_index_to_preflare_index(flare_index)]
+            jedi_row["Pre-Flare Start Time"] = preflare_df['Pre-Flare Start Time'].iloc[map_flare_index_to_preflare_index(flare_index)]
+            jedi_row["Pre-Flare End Time"] = preflare_df['Pre-Flare End Time'].iloc[map_flare_index_to_preflare_index(flare_index)]
             preflare_irradiance_cols = [col for col in jedi_row.columns if 'Pre-Flare Irradiance' in col]
             jedi_row[preflare_irradiance_cols] = preflare_df['preflare_irradiance'].iloc[map_flare_index_to_preflare_index(flare_index)]  # TODO: Is n_element preflare_irradiance handled right here?
 

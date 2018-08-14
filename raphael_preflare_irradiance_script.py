@@ -51,6 +51,6 @@ preflare_window_df = pd.DataFrame(OrderedDict([('window start', preflare_window_
 preflare_irradiance_df = pd.DataFrame(preflare_irradiance, columns=wavelengths)
 
 preflare_df = preflare_window_df.join(preflare_irradiance_df)
-preflare_df.to_hdf(jedi_config.preflare_hdf_filename, 'preflare_df')
+preflare_df.to_hdf(jedi_config.preflare_csv_filename, 'preflare_df')
 
 print('Preflare irradiance processing time: %sd' % telapsed)

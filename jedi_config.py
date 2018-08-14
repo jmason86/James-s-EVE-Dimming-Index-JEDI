@@ -29,7 +29,7 @@ eve_lines = None
 goes_flare_events = None
 logger = None
 jedi_csv_filename = None
-preflare_hdf_filename = None
+preflare_csv_filename = None
 jedi_row = None
 
 
@@ -48,7 +48,7 @@ def init():
             goes_flare_events[pandas DataFrame]:              Flares as observed by GOES/XRS. Store class, start and peak time
             logger [JpmLogger]:                               A configurable log that can optionally also print to console.
             jedi_csv_filename [str]:                          The unique path/filename for the jedi catalog in this run to be stored in on disk.
-            preflare_hdf_filename [str]:                      The path/filename of the computed pre-flare irradiances.
+            preflare_csv_filename [str]:                      The path/filename of the computed pre-flare irradiances.
             all_minutes_since_last_flare [numpy float array]: The amount of time between each flare.
             preflare_indices [numpy int array]:               The indices where flares are considered time-independent.
 
@@ -58,7 +58,7 @@ def init():
         Example:
             jedi_config.init()
     """
-    global eve_lines, goes_flare_events, logger, jedi_csv_filename, preflare_hdf_filename, all_minutes_since_last_flare, preflare_indices
+    global eve_lines, goes_flare_events, logger, jedi_csv_filename, preflare_csv_filename, all_minutes_since_last_flare, preflare_indices
 
     # Initialize logger
     logger = JpmLogger(filename=logger_filename, path=output_path, console=False)
@@ -66,7 +66,7 @@ def init():
 
     # Set up filenames
     jedi_csv_filename = output_path + 'jedi_{0}.csv'.format(Time.now().iso)
-    preflare_hdf_filename = os.path.join(output_path, 'preflare_df.hdf5')
+    preflare_csv_filename = os.path.join(output_path, 'Preflare Determination/Preflare Irradiances.csv')
 
     # Load the EVE data
     # TODO: Replace this shortcut method with the method I'm building into sunpy

@@ -115,91 +115,94 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
         plt.close('all')
 
         light_curve_df = light_curve_df.drop('irradiance_percent', 1)
-        ax = light_curve_df[:estimated_time_of_peak_start].plot(legend=False, c='grey')
-        #  plt.plot(light_curve_df[:estimated_time_of_peak_start].irradiance, c='grey') #  using matplotlib instead of pandas
-        #  ax = plt.gca()
-        start_date = light_curve_df.index.values[0]
-        start_date_string = pd.to_datetime(str(start_date))
-        plt.title('Pre-flare Windows')
-        plt.xlabel(start_date_string.strftime('%Y-%m-%d %H:%M:%S'))
-        plt.ylabel('Irradiance [W m$^{-2}$]')
-        fmtr = dates.DateFormatter("%H:%M:%S")
-        ax.xaxis.set_major_formatter(fmtr)
-        ax.xaxis.set_major_locator(dates.HourLocator())
-        ax2 = ax.twinx()
-        light_curve_df[:estimated_time_of_peak_start].plot(ax=ax2, legend=False, c='grey')
-        #  ax2.plot(light_curve_df[:estimated_time_of_peak_start].irradiance, color='grey')
-        vals = ax2.get_yticks()
-        ax2.set_yticklabels(['{:3.2f}%'.format((x - median_irradiance) / median_irradiance * 100)
-                             for x in vals])
+        try:
+            ax = light_curve_df[:estimated_time_of_peak_start].plot(legend=False, c='grey')
+            #  plt.plot(light_curve_df[:estimated_time_of_peak_start].irradiance, c='grey') #  using matplotlib instead of pandas
+            #  ax = plt.gca()
+            start_date = light_curve_df.index.values[0]
+            start_date_string = pd.to_datetime(str(start_date))
+            plt.title('Pre-flare Windows')
+            plt.xlabel(start_date_string.strftime('%Y-%m-%d %H:%M:%S'))
+            plt.ylabel('Irradiance [W m$^{-2}$]')
+            fmtr = dates.DateFormatter("%H:%M:%S")
+            ax.xaxis.set_major_formatter(fmtr)
+            ax.xaxis.set_major_locator(dates.HourLocator())
+            ax2 = ax.twinx()
+            light_curve_df[:estimated_time_of_peak_start].plot(ax=ax2, legend=False, c='grey')
+            #  ax2.plot(light_curve_df[:estimated_time_of_peak_start].irradiance, color='grey')
+            vals = ax2.get_yticks()
+            ax2.set_yticklabels(['{:3.2f}%'.format((x - median_irradiance) / median_irradiance * 100)
+                                 for x in vals])
 
-        # First window
-        start = dates.date2num(light_curve_df.index[0])
-        end = dates.date2num(windows[0].index[-1])
-        width = end - start
-        rect = Rectangle((start, 0), width, 1, color='deepskyblue', alpha=0.2)
-        ax.add_patch(rect)
-        plt.plot([windows[0].index[0], windows[0].index[-1]], [medians_abs[0], medians_abs[0]],
-                 linestyle='dashed', c='dimgrey')
-        ax.text(start + width / 2.0, np.min(light_curve_df[:estimated_time_of_peak_start].irradiance),
-                'median$_1$ = ' + latex_float(medians[0]) + '% \n' +
-                '$\sigma_1$ = ' + latex_float(stds[0]) + '%',
-                fontsize=11, ha='center', va='bottom')
+            # First window
+            start = dates.date2num(light_curve_df.index[0])
+            end = dates.date2num(windows[0].index[-1])
+            width = end - start
+            rect = Rectangle((start, 0), width, 1, color='deepskyblue', alpha=0.2)
+            ax.add_patch(rect)
+            plt.plot([windows[0].index[0], windows[0].index[-1]], [medians_abs[0], medians_abs[0]],
+                     linestyle='dashed', c='dimgrey')
+            ax.text(start + width / 2.0, np.min(light_curve_df[:estimated_time_of_peak_start].irradiance),
+                    'median$_1$ = ' + latex_float(medians[0]) + '% \n' +
+                    '$\sigma_1$ = ' + latex_float(stds[0]) + '%',
+                    fontsize=11, ha='center', va='bottom')
 
-        # Second window
-        start = dates.date2num(windows[1].index[0])
-        end = dates.date2num(windows[1].index[-1])
-        width = end - start
-        rect = Rectangle((start, 0), width, 1, color='slateblue', alpha=0.2)
-        ax.add_patch(rect)
-        plt.plot([windows[1].index[0], windows[1].index[-1]], [medians_abs[1], medians_abs[1]],
-                 linestyle='dashed', c='dimgrey')
-        ax.text(start + width / 2.0, np.min(light_curve_df[:estimated_time_of_peak_start].irradiance),
-                'median$_2$ = ' + latex_float(medians[1]) + '% \n' +
-                '$\sigma_2$ = ' + latex_float(stds[1]) + '%',
-                fontsize=11, ha='center', va='bottom')
+            # Second window
+            start = dates.date2num(windows[1].index[0])
+            end = dates.date2num(windows[1].index[-1])
+            width = end - start
+            rect = Rectangle((start, 0), width, 1, color='slateblue', alpha=0.2)
+            ax.add_patch(rect)
+            plt.plot([windows[1].index[0], windows[1].index[-1]], [medians_abs[1], medians_abs[1]],
+                     linestyle='dashed', c='dimgrey')
+            ax.text(start + width / 2.0, np.min(light_curve_df[:estimated_time_of_peak_start].irradiance),
+                    'median$_2$ = ' + latex_float(medians[1]) + '% \n' +
+                    '$\sigma_2$ = ' + latex_float(stds[1]) + '%',
+                    fontsize=11, ha='center', va='bottom')
 
-        if not np.isnan(preflare_irradiance):
-            ax.axes.axhline(y=preflare_irradiance, linewidth=2, color='tomato', linestyle='dashed')
-            ax.text(start + width / 2.0, np.max(light_curve_df[:estimated_time_of_peak_start].irradiance),
-                    'pre-flare I = ' + latex_float(preflare_irradiance) + ' W m$^{-2}$',
-                    fontsize=11, ha='center', va='top', color='tomato')
-        else:
-            ax.text(start + width / 2.0, np.max(light_curve_df[:estimated_time_of_peak_start].irradiance),
-                    'pre-flare I = N/A \n' +
-                    'median condition ok: ' + str(not failed_median_threshold) + '\n' +
-                    '$\sigma$ condition ok: ' + str(not failed_std_threshold),
-                    fontsize=11, ha='center', va='top', color='tomato')
+            if not np.isnan(preflare_irradiance):
+                ax.axes.axhline(y=preflare_irradiance, linewidth=2, color='tomato', linestyle='dashed')
+                ax.text(start + width / 2.0, np.max(light_curve_df[:estimated_time_of_peak_start].irradiance),
+                        'pre-flare I = ' + latex_float(preflare_irradiance) + ' W m$^{-2}$',
+                        fontsize=11, ha='center', va='top', color='tomato')
+            else:
+                ax.text(start + width / 2.0, np.max(light_curve_df[:estimated_time_of_peak_start].irradiance),
+                        'pre-flare I = N/A \n' +
+                        'median condition ok: ' + str(not failed_median_threshold) + '\n' +
+                        '$\sigma$ condition ok: ' + str(not failed_std_threshold),
+                        fontsize=11, ha='center', va='top', color='tomato')
 
-        # Third window
-        start = dates.date2num(windows[2].index[0])
-        end = dates.date2num(windows[2].index[-1])
-        width = end - start
-        rect = Rectangle((start, 0), width, 1, color='violet', alpha=0.2)
-        ax.add_patch(rect)
-        plt.plot([windows[2].index[0], windows[2].index[-1]], [medians_abs[2], medians_abs[2]],
-                 linestyle='dashed', c='dimgrey')
-        ax.text(start + width / 2.0, np.min(light_curve_df[:estimated_time_of_peak_start].irradiance),
-                'median$_3$ = ' + latex_float(medians[2]) + '% \n' +
-                '$\sigma_3$ = ' + latex_float(stds[2]) + '%',
-                fontsize=11, ha='center', va='bottom')
-        ax.text(end, np.max(light_curve_df[:estimated_time_of_peak_start].irradiance),
-                'median diff = ' + latex_float(max_median_diff) + '% \n' +
-                r'thresh $\times \mu_{\sigma n}$ = ' + latex_float(max_median_diff_threshold * np.mean(stds)) + '%',
-                fontsize=11, ha='right', va='top')
+            # Third window
+            start = dates.date2num(windows[2].index[0])
+            end = dates.date2num(windows[2].index[-1])
+            width = end - start
+            rect = Rectangle((start, 0), width, 1, color='violet', alpha=0.2)
+            ax.add_patch(rect)
+            plt.plot([windows[2].index[0], windows[2].index[-1]], [medians_abs[2], medians_abs[2]],
+                     linestyle='dashed', c='dimgrey')
+            ax.text(start + width / 2.0, np.min(light_curve_df[:estimated_time_of_peak_start].irradiance),
+                    'median$_3$ = ' + latex_float(medians[2]) + '% \n' +
+                    '$\sigma_3$ = ' + latex_float(stds[2]) + '%',
+                    fontsize=11, ha='center', va='bottom')
+            ax.text(end, np.max(light_curve_df[:estimated_time_of_peak_start].irradiance),
+                    'median diff = ' + latex_float(max_median_diff) + '% \n' +
+                    r'thresh $\times \mu_{\sigma n}$ = ' + latex_float(max_median_diff_threshold * np.mean(stds)) + '%',
+                    fontsize=11, ha='right', va='top')
 
-        # Increase border so y-axes don't get cut off in savefig, even though they don't in plt.show()
-        plt.gcf().subplots_adjust(left=0.22)
+            # Increase border so y-axes don't get cut off in savefig, even though they don't in plt.show()
+            plt.gcf().subplots_adjust(left=0.22)
 
-        plt.savefig(plot_path_filename)
-        if verbose:
-            jedi_config.logger.info("Summary plot for event with start time {0} saved to {1}".format(estimated_time_of_peak_start, plot_path_filename))
+            plt.savefig(plot_path_filename)
+            if verbose:
+                jedi_config.logger.info("Summary plot for event with start time {0} saved to {1}".format(estimated_time_of_peak_start, plot_path_filename))
+        except ValueError:
+            jedi_config.logger.error('Pandas matplotlib plotter had an error: ordinal must be >= 1.')
 
     return preflare_irradiance
 
 
 def get_preflare_irradiance_all_emission_lines(flare_index,
-                             verbose=False):
+                                               verbose=False):
     """Loop through all (39) of the EVE extracted emission lines and get the pre-flare irradiance for each
 
         Inputs:
@@ -279,7 +282,7 @@ def multiprocess_preflare_irradiance(preflare_indices,
         jedi_config.logger.info('Pool closed. Preparing export of dataframe.')
 
     preflare_irradiances = np.array(preflare_irradiances)
-    preflare_windows_start = preflare_windows_start  # TODO: Should this be np.array()?
-    preflare_windows_end = preflare_windows_end  # TODO: Should this be np.array()?
+    preflare_windows_start = preflare_windows_start
+    preflare_windows_end = preflare_windows_end
 
     return preflare_irradiances, preflare_windows_start, preflare_windows_end

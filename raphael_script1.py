@@ -32,7 +32,7 @@ if jedi_config.verbose:
     jedi_config.logger.info('Created JEDI row definition.')
 
 # Load the pre-flare irradiance data
-preflare_df = pd.read_hdf(jedi_config.preflare_hdf_filename)
+preflare_df = pd.read_hdf(jedi_config.preflare_csv_filename)
 
 # Prepare a hold-over pre-flare irradiance value,
 # which will normally have one element for each of the 39 emission lines
