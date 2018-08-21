@@ -243,7 +243,7 @@ def light_curve_fitting(jedi_config, eve_lines_event, jedi_row, flare_index, unc
                                                                                             flare_index, column),
                                                                                         verbose=jedi_config.verbose,
                                                                                         logger=jedi_config.logger,
-                                                                                        n_jobs=jedi_config.n_jobs)
+                                                                                        n_jobs=jedi_config.n_threads)
             eve_lines_event[column] = light_curve_fit_df
             jedi_row[column + ' Fitting Gamma'] = best_fit_gamma
             jedi_row[column + ' Fitting Score'] = best_fit_score
