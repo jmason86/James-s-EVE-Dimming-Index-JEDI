@@ -21,8 +21,7 @@ dimming_window_relative_to_flare_minutes_left = -1.0
 dimming_window_relative_to_flare_minutes_right = 1440.0
 threshold_minimum_dimming_window_minutes = 120.0
 nevents = 5052
-
-n_jobs = 1
+n_threads = 6  # The number of threads to use when doing parallel processing tasks
 verbose = True
 
 eve_lines = None
@@ -93,7 +92,6 @@ def init():
     goes_flare_events['event_start_time_human'] = goes_flare_events['event_start_time_human'].astype(str)
     goes_flare_events['peak_time'] = Time(goes_flare_events['event_peak_time_jd'], format='jd', scale='utc')
     goes_flare_events['start_time'] = Time(goes_flare_events['event_start_time_jd'], format='jd', scale='utc')
-    #t = pd.to_datetime(goes_flare_events['event_start_time_jd'], unit='D', origin='julian')  # TODO: Is this the thing that rounds flare time to 00 seconds?
 
     # Compute the amount of time between all flares [minutes]
     peak_time = goes_flare_events['peak_time']
@@ -102,6 +100,7 @@ def init():
     # Figure out which flares are independent, store those indices
     is_flare_independent = all_minutes_since_last_flare > threshold_time_prior_flare_minutes
     preflare_indices = np.where(is_flare_independent)[0] + 1  # Add 1 to map back to event index and not to the differentiated vector
+    logger.info('Found {0} independent flares of {1} total flares given a time separation of {2} minutes.'.format(len(preflare_indices), len(is_flare_independent), threshold_time_prior_flare_minutes))
 
 
 def init_jedi_row():
