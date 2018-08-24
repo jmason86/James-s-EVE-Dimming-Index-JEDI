@@ -20,7 +20,7 @@ threshold_time_prior_flare_minutes = 480.0
 dimming_window_relative_to_flare_minutes_left = -1.0
 dimming_window_relative_to_flare_minutes_right = 1440.0
 threshold_minimum_dimming_window_minutes = 120.0
-nevents = 5052
+n_events = 5052
 n_threads = 6  # The number of threads to use when doing parallel processing tasks
 verbose = True
 
@@ -29,7 +29,6 @@ goes_flare_events = None
 logger = None
 jedi_csv_filename = None
 preflare_csv_filename = None
-jedi_row = None
 
 
 def init():
@@ -121,11 +120,9 @@ def init_jedi_row():
         Example:
             jedi_row = init_jedi_row()
     """
-    global jedi_row
-
     jedi_row = pd.DataFrame(
         OrderedDict((
-            ('Event #', pd.Series(np.arange(nevents))),
+            ('Event #', pd.Series(np.arange(n_events))),
             ('GOES Flare Start Time', ''),
             ('GOES Flare Peak Time', ''),
             ('GOES Flare Class', ''),
@@ -177,7 +174,3 @@ def init_jedi_row():
     # Start a new csv file on disk and return the jedi row dataframe
     jedi_row.to_csv(jedi_csv_filename, header=True, index=False, mode='w')
     return jedi_row
-
-
-
-
