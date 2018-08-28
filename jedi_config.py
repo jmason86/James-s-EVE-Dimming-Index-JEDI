@@ -22,7 +22,7 @@ dimming_window_relative_to_flare_minutes_right = 1440.0
 threshold_minimum_dimming_window_minutes = 120.0
 n_events = 5052
 n_threads = 6  # The number of threads to use when doing parallel processing tasks
-verbose = True
+verbose = True  # Set to log the processing messages to disk and console.
 
 eve_lines = None
 goes_flare_events = None
@@ -81,7 +81,7 @@ def init():
     eve_lines = eve_lines.drop_duplicates()
 
     # Get GOES flare events above C1 within date range corresponding to EVE data
-    # flares = get_goes_flare_events(eve_lines.index[0], eve_lines.index[-1], verbose=verbose)  # TODO: The method in sunpy needs fixing, issue 2434
+    # flares = get_goes_flare_events(eve_lines.index[0], eve_lines.index[-1])  # TODO: The method in sunpy needs fixing, issue 2434
 
     # Load GOES events from IDL saveset instead of directly through sunpy
     logger.info('Loading GOES flare events.')

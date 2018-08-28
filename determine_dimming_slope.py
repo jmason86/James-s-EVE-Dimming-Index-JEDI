@@ -13,7 +13,7 @@ __contact__ = 'jmason86@gmail.com'
 
 def determine_dimming_slope(light_curve_df,
                             earliest_allowed_time=None, latest_allowed_time=None, smooth_points=0,
-                            plot_path_filename=None, verbose=False):
+                            plot_path_filename=None):
     """Find the slope of dimming in a light curve, if any.
 
     Inputs:
@@ -42,10 +42,9 @@ def determine_dimming_slope(light_curve_df,
 
     Example:
         slope_min, slope_max, slope_mean = determine_dimming_slope(light_curve_df,
-                                                                   plot_path_filename='./determine_dimming_slope_summary.png',
-                                                                   verbose=True)
+                                                                   plot_path_filename='./determine_dimming_slope_summary.png')
     """
-    if verbose:
+    if jedi_config.verbose:
         jedi_config.logger.info("Running on event with light curve start time of {0}.".format(light_curve_df.index[0]))
 
     # If no earliest_allowed_time set, then set it to beginning of light_curve_df
@@ -61,7 +60,7 @@ def determine_dimming_slope(light_curve_df,
     # Optionally smooth the light curve with a rolling mean
     if smooth_points:
         light_curve_df['irradiance'] = light_curve_df.rolling(smooth_points, center=True).mean()
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.info('Applied {0} point smooth.'.format(smooth_points))
 
     first_non_nan = light_curve_df['irradiance'].first_valid_index()
@@ -71,12 +70,12 @@ def determine_dimming_slope(light_curve_df,
     # Find the max in the allowed window
     max_time = light_curve_df[earliest_allowed_time:latest_allowed_time]['irradiance'].idxmax()
     max_irradiance = light_curve_df['irradiance'].loc[max_time]
-    if verbose:
+    if jedi_config.verbose:
         jedi_config.logger.info('Maximum in allowed window found with value of {0:.2f} at time {1}'.format(max_irradiance, max_time))
 
     # Compute the derivative in the time window of interest (inverting sign so that we describe "downward slope")
     derivative = -light_curve_df[max_time:latest_allowed_time]['irradiance'].diff() / light_curve_df[max_time:latest_allowed_time].index.to_series().diff().dt.total_seconds()
-    if verbose:
+    if jedi_config.verbose:
         jedi_config.logger.info("Computed derivative of light curve within time window of interest.")
 
     # Get the min, max, and mean slope
@@ -86,11 +85,11 @@ def determine_dimming_slope(light_curve_df,
     slope_min_str = latex_float(slope_min)
     slope_max_str = latex_float(slope_max)
     slope_mean_str = latex_float(slope_mean)
-    if verbose:
+    if jedi_config.verbose:
         jedi_config.logger.info("Computed min ({0}), max ({1}), and mean ({2}) %/s slope.".format(slope_min_str, slope_max_str, slope_mean_str))
 
     # Do a few sanity checks for the log
-    if verbose:
+    if jedi_config.verbose:
         if slope_min < 0:
             jedi_config.logger.warning("Minimum slope of {0} is unexpectedly < 0.".format(slope_min))
         if slope_max < 0:
@@ -134,7 +133,7 @@ def determine_dimming_slope(light_curve_df,
         ax.legend(loc='best')
 
         plt.savefig(plot_path_filename)
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.info("Summary plot saved to %s" % plot_path_filename)
 
     # Return the slopes

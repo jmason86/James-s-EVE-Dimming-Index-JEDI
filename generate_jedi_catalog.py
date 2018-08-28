@@ -39,8 +39,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
                           dimming_window_relative_to_flare_minutes_left=-1.0,
                           dimming_window_relative_to_flare_minutes_right=1440.0,
                           threshold_minimum_dimming_window_minutes=120.0,
-                          output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
-                          verbose=True):
+                          output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'):
     """Wrapper code for creating James's Extreme Ultraviolet Variability Experiment (EVE) Dimming Index (JEDI) catalog.
 
     Inputs:
@@ -67,7 +66,6 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
                                                                 Default is 120 (2 hours).
         output_path [str]:                                      Set to a path for saving the JEDI catalog table and processing
                                                                 summary plots. Default is '/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
-        verbose [bool]:                                         Set to log the processing messages to disk and console. Default is False.
 
     Outputs:
         No direct return, but writes a csv to disk with the dimming paramerization results.
@@ -77,8 +75,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
         None
 
     Example:
-        generate_jedi_catalog(output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
-                              verbose=True)
+        generate_jedi_catalog(output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/')
     """
 
     # Force flare_index_range to be an array type so it can be indexed in later code
@@ -91,7 +88,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
     # Define the columns of the JEDI catalog
     jedi_row = jedi_config.init_jedi_row()
 
-    if verbose:
+    if jedi_config.verbose:
         jedi_config.logger.info('Created JEDI row definition.')
 
     # Start a progress bar
@@ -105,8 +102,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
         preflare_irradiances, \
             preflare_windows_start, \
             preflare_windows_end = multiprocess_preflare_irradiance(jedi_config.preflare_indices,
-                                                                    n_threads=6,
-                                                                    verbose=verbose)
+                                                                    n_threads=6)
         jedi_config.logger.info('Finished processing pre-flare irradiances. Writing them to disk.')
         preflare_df = pd.DataFrame()
         preflare_df['Pre-Flare Start Time'] = preflare_windows_start
@@ -140,10 +136,10 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
         jedi_row['GOES Flare Start Time'] = jedi_config.goes_flare_events['start_time'][flare_index].iso
         jedi_row['GOES Flare Peak Time'] = jedi_config.goes_flare_events['peak_time'][flare_index].iso
         jedi_row['GOES Flare Class'] = jedi_config.goes_flare_events['class'][flare_index]
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.info("Event {0} GOES flare details stored to JEDI row.".format(flare_index))
 
-        # If haven't already done all pre-parameterization processing
+        # Only do pre-parameterization processing if it hasn't been done already (check if files exist on disk)
         processed_jedi_non_params_filename = output_path + 'Processed Pre-Parameterization Data/Event {0} Pre-Parameterization.h5'.format(flare_index)
         processed_lines_filename = output_path + 'Processed Lines Data/Event {0} Lines.h5'.format(flare_index)
         if not os.path.isfile(processed_lines_filename) or not os.path.isfile(processed_jedi_non_params_filename):
@@ -152,10 +148,12 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
             preflare_irradiance_cols = [col for col in jedi_row.columns if 'Pre-Flare Irradiance' in col]
             jedi_row[preflare_irradiance_cols] = preflare_df[preflare_irradiance_cols].iloc[map_flare_index_to_preflare_index(flare_index)].values
 
-            if verbose:
-                jedi_config.logger.info("Event {0} pre-flare determination complete.".format(flare_index))
+            if jedi_config.verbose:
+                jedi_config.logger.info("Event {0} pre-flare irradiances stored to JEDI row.".format(flare_index))
 
             # Clip EVE data to dimming window
+            eve_lines_event = clip_eve_data_to_dimming_window(flare_index)
+            
             bracket_time_left = (jedi_config.goes_flare_events['peak_time'][flare_index] + (dimming_window_relative_to_flare_minutes_left * u.minute))
             next_flare_time = Time((jedi_config.goes_flare_events['peak_time'][flare_index + 1]).iso)
             user_choice_time = (jedi_config.goes_flare_events['peak_time'][flare_index] + (dimming_window_relative_to_flare_minutes_right * u.minute))
@@ -164,7 +162,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
             # If flare is shortening the window, set the flare_interrupt flag
             if bracket_time_right == next_flare_time:
                 flare_interrupt = True
-                if verbose:
+                if jedi_config.verbose:
                     jedi_config.logger.info('Flare interrupt for event at {0} by flare at {1}'.format(jedi_config.goes_flare_events['peak_time'][flare_index].iso, next_flare_time))
 
             # Write flare_interrupt to JEDI row
@@ -176,7 +174,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
                 jedi_row.to_csv(csv_filename, header=False, index=False, mode='a')
 
                 # Log message
-                if verbose:
+                if jedi_config.verbose:
                     jedi_config.logger.info('The dimming window duration of {0} minutes is shorter than the minimum threshold of {1} minutes. Skipping this event ({2})'
                                 .format(((bracket_time_right - bracket_time_left).sec / 60.0), threshold_minimum_dimming_window_minutes, jedi_config.goes_flare_events['peak_time'][flare_index]))
 
@@ -185,7 +183,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
             else:
                 eve_lines_event = eve_lines[bracket_time_left.iso:bracket_time_right.iso]
 
-            if verbose:
+            if jedi_config.verbose:
                 jedi_config. \
                     jedi_config. \
                     jedi_config.logger.info("Event {0} EVE data clipped to dimming window.".format(flare_index))
@@ -194,7 +192,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
             # (in place, don't care about absolute units from this point forward)
             eve_lines_event = (eve_lines_event - preflare_irradiance) / preflare_irradiance * 100.0
 
-            if verbose:
+            if jedi_config.verbose:
                 jedi_config.logger.info("Event {0} irradiance converted from absolute to percent units.".format(flare_index))
 
             # Do flare removal in the light curves and add the results to the DataFrame
@@ -209,14 +207,13 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
                 light_curve_to_subtract_with_df.columns = ['irradiance']
 
                 if (light_curve_to_subtract_from_df.isnull().all().all()) or (light_curve_to_subtract_with_df.isnull().all().all()):
-                    if verbose:
+                    if jedi_config.verbose:
                         jedi_config.logger.info('Event {0} {1} correction skipped because all irradiances are NaN.'.format(flare_index, ion_permutations[i]))
                 else:
                     light_curve_corrected, seconds_shift, scale_factor = light_curve_peak_match_subtract(light_curve_to_subtract_from_df,
                                                                                                          light_curve_to_subtract_with_df,
                                                                                                          pd.Timestamp((jedi_config.goes_flare_events['peak_time'][flare_index]).iso),
-                                                                                                         plot_path_filename=output_path + 'Peak Subtractions/Event {0} {1}.png'.format(flare_index, ion_permutations[i]),
-                                                                                                         verbose=verbose)
+                                                                                                         plot_path_filename=output_path + 'Peak Subtractions/Event {0} {1}.png'.format(flare_index, ion_permutations[i]))
 
                     eve_lines_event[ion_permutations[i]] = light_curve_corrected
                     jedi_row[ion_permutations[i] + ' Correction Time Shift [s]'] = seconds_shift
@@ -224,7 +221,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
 
                     plt.close('all')
 
-                    if verbose:
+                    if jedi_config.verbose:
                         jedi_config.logger.info('Event {0} flare removal correction complete'.format(flare_index))
                     #progress_bar_correction.update(i)
 
@@ -243,7 +240,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
 
             for i, column in enumerate(eve_lines_event):
                 if eve_lines_event[column].isnull().all().all():
-                    if verbose:
+                    if jedi_config.verbose:
                         jedi_config.logger.info('Event {0} {1} fitting skipped because all irradiances are NaN.'.format(flare_index, column))
                 else:
                     eve_line_event = pd.DataFrame(eve_lines_event[column])
@@ -257,13 +254,12 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
                     plt.close('all')
                     light_curve_fit_df, best_fit_gamma, best_fit_score = light_curve_fit(eve_line_event,
                                                                                          gamma=np.array([5e-8]),
-                                                                                         plots_save_path='{0}Event {1} {2} '.format(fitting_path, flare_index, column),
-                                                                                         verbose=verbose)
+                                                                                         plots_save_path='{0}Event {1} {2} '.format(fitting_path, flare_index, column))
                     eve_lines_event[column] = light_curve_fit_df
                     jedi_row[column + ' Fitting Gamma'] = best_fit_gamma
                     jedi_row[column + ' Fitting Score'] = best_fit_score
 
-                    if verbose:
+                    if jedi_config.verbose:
                         jedi_config.logger.info('Event {0} {1} light curves fitted.'.format(flare_index, column))
                     #progress_bar_fitting.update(i)
 
@@ -276,7 +272,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
         else:
             jedi_row = pd.read_hdf(processed_jedi_non_params_filename, 'jedi_row')
             eve_lines_event = pd.read_hdf(processed_lines_filename, 'eve_lines_event')
-            if verbose:
+            if jedi_config.verbose:
                 jedi_config.logger.info('Loading files {0} and {1} rather than processing again.'.format(processed_jedi_non_params_filename, processed_lines_filename))
 
         # Parameterize the light curves for dimming
@@ -290,7 +286,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
 
             # Determine whether to do the parameterizations or not
             if eve_lines_event[column].isnull().all().all():
-                if verbose:
+                if jedi_config.verbose:
                     jedi_config.logger.info('Event {0} {1} parameterization skipped because all irradiances are NaN.'.format(flare_index, column))
             else:
                 eve_line_event = pd.DataFrame(eve_lines_event[column])
@@ -304,7 +300,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
                 plt.close('all')
                 depth_percent, depth_time = determine_dimming_depth(eve_line_event,
                                                                     plot_path_filename='{0}Event {1} {2} Depth.png'.format(depth_path, flare_index, column),
-                                                                    verbose=verbose, logger=jedi_config.logger)
+                                                                    logger=jedi_config.logger)
 
                 jedi_row[column + ' Depth [%]'] = depth_percent
                 # jedi_row[column + ' Depth Uncertainty [%]'] = depth_uncertainty  # TODO: make determine_dimming_depth return the propagated uncertainty
@@ -319,7 +315,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
                 slope_end_time = depth_time
 
                 if (pd.isnull(slope_start_time)) or (pd.isnull(slope_end_time)):
-                    if verbose:
+                    if jedi_config.verbose:
                         jedi_config.logger.warning('Cannot compute slope or duration because slope bounding times NaN.')
                 else:
                     plt.close('all')
@@ -327,7 +323,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
                                                                                earliest_allowed_time=slope_start_time,
                                                                                latest_allowed_time=slope_end_time,
                                                                                plot_path_filename='{0}Event {1} {2} Slope.png'.format(slope_path, flare_index, column),
-                                                                               verbose=verbose, logger=jedi_config.logger)
+                                                                               logger=jedi_config.logger)
 
                     jedi_row[column + ' Slope Min [%/s]'] = slope_min
                     jedi_row[column + ' Slope Max [%/s]'] = slope_max
@@ -345,13 +341,13 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
                     duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(eve_line_event,
                                                                                                           earliest_allowed_time=slope_start_time,
                                                                                                           plot_path_filename='{0}Event {1} {2} Duration.png'.format(duration_path, flare_index, column),
-                                                                                                          verbose=verbose, logger=jedi_config.logger)
+                                                                                                          logger=jedi_config.logger)
 
                     jedi_row[column + ' Duration [s]'] = duration_seconds
                     jedi_row[column + ' Duration Start Time'] = duration_start_time
                     jedi_row[column + ' Duration End Time'] = duration_end_time
 
-                if verbose:
+                if jedi_config.verbose:
                     jedi_config.logger.info("Event {0} {1} parameterizations complete.".format(flare_index, column))
 
                 # Produce a summary plot for each light curve
@@ -403,12 +399,12 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
                 summary_filename = '{0}Event {1} {2} Parameter Summary.png'.format(summary_path, flare_index, column)
                 plt.savefig(summary_filename)
                 plt.close('all')
-                if verbose:
+                if jedi_config.verbose:
                     jedi_config.logger.info("Summary plot saved to %s" % summary_filename)
 
         # Write to the JEDI catalog on disk
         jedi_row.to_csv(csv_filename, header=False, index=False, mode='a')
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.info('Event {0} JEDI row written to {1}.'.format(flare_index, csv_filename))
 
         # Update progress bar
@@ -453,27 +449,25 @@ def map_flare_index_to_preflare_index(flare_index):
     preflare_map_indices = np.where(sidx == -1, invalid_index, idx[sidx])
     return preflare_map_indices[flare_index - 1]
 
-def clip_eve_data_to_dimming_window(flare_index,
-                                    verbose=False):
+def clip_eve_data_to_dimming_window(flare_index):
     """Clip all EVE data (4+ years) down to just the time range of interest for this particular event (~hours)
 
     Inputs:
         flare_index [int]: The identifier for which event in JEDI to process.
 
     Optional Inputs:
-        verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
+        None.
 
     Outputs:
         eve_lines_event [pandas DataFrame]: The (39) EVE extracted emission lines (columns) trimmed in time (rows).
 
     Optional Outputs:
-        None
+        None.
 
     Example:
-        eve_lines_event = clip_eve_data_to_dimming_window(flare_index,
-                                                          verbose=verbose)
+        eve_lines_event = clip_eve_data_to_dimming_window(flare_index)
     """
-    if verbose:
+    if jedi_config.verbose:
         jedi_config.logger.info("Clipping EVE data in time for event {0}.".format(flare_index))
 
     flare_interrupt = False
@@ -495,8 +489,6 @@ def clip_eve_data_to_dimming_window(flare_index,
 
     if ((bracket_time_right - bracket_time_left).sec / 60.0) < jedi_config.threshold_minimum_dimming_window_minutes:
         # Leave all dimming parameters as NaN and write this null result to the CSV on disk
-
-        # TODO: TO BE REVIEWED IF USING jedi_df as a ~5k x 24k dataframe!!!!!
         jedi_row.to_csv(jedi_config.jedi_csv_filename, header=False, index=False, mode='a')
 
         # Log message
@@ -517,8 +509,7 @@ def clip_eve_data_to_dimming_window(flare_index,
     return eve_lines_event
 
 
-def loop_light_curve_peak_match_subtract(eve_lines_event, jedi_row, flare_index, ion_tuples, ion_permutations,
-                                         verbose=False):
+def loop_light_curve_peak_match_subtract(eve_lines_event, jedi_row, flare_index, ion_tuples, ion_permutations):
     """Loop through all of the ion permutations, match the pairs of light curves at the flare peak and subtract them
 
     Inputs:
@@ -529,19 +520,18 @@ def loop_light_curve_peak_match_subtract(eve_lines_event, jedi_row, flare_index,
         ion_permutations [string array]:    Every pair-permutation of the 39 extracted EVE emission lines with "by" between them.
 
     Optional Inputs:
-        verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
+        None.
 
     Outputs:
         No new outputs; appends to eve_lines_event and fills in jedi_row
 
     Optional Outputs:
-        None
+        None.
 
     Example:
-        loop_light_curve_peak_match_subtract(eve_lines_event, jedi_row, flare_index, ion_tuples, ion_permutations,
-                                             verbose=verbose)
+        loop_light_curve_peak_match_subtract(eve_lines_event, jedi_row, flare_index, ion_tuples, ion_permutations)
     """
-    if verbose:
+    if jedi_config.verbose:
         jedi_config.logger.info("Clipping EVE data in time for event {0}.".format(flare_index))
 
     for i in range(len(ion_tuples)):
@@ -554,16 +544,14 @@ def loop_light_curve_peak_match_subtract(eve_lines_event, jedi_row, flare_index,
             if jedi_config.verbose:
                 jedi_config.logger.info(
                     'Event {0} {1} correction skipped because all irradiances are NaN.'.format(flare_index,
-                                                                                               ion_permutations[
-                                                                                                   i]))
+                                                                                               ion_permutations[i]))
         else:
             light_curve_corrected, seconds_shift, scale_factor = light_curve_peak_match_subtract(
-                light_curve_to_subtract_from_df,
-                light_curve_to_subtract_with_df,
-                pd.Timestamp((jedi_config.goes_flare_events['peak_time'][flare_index]).iso),
-                plot_path_filename=jedi_config.output_path + 'Peak Subtractions/Event {0} {1}.png'.format(flare_index,
-                                                                                              ion_permutations[i]),
-                verbose=jedi_config.verbose, logger=jedi_config.logger)
+                                                                                                 light_curve_to_subtract_from_df,
+                                                                                                 light_curve_to_subtract_with_df,
+                                                                                                 pd.Timestamp((jedi_config.goes_flare_events['peak_time'][flare_index]).iso),
+                                                                                                 plot_path_filename=jedi_config.output_path + 'Peak Subtractions/Event {0} {1}.png'.format(flare_index, ion_permutations[i]),
+                                                                                                 logger=jedi_config.logger)
 
             eve_lines_event[ion_permutations[i]] = light_curve_corrected  # TODO: Verify that I don't have to pass this back, i.e., this changes the df outside of this function
             jedi_row[ion_permutations[i] + ' Correction Time Shift [s]'] = seconds_shift
@@ -575,8 +563,7 @@ def loop_light_curve_peak_match_subtract(eve_lines_event, jedi_row, flare_index,
                 jedi_config.logger.info('Event {0} flare removal correction complete'.format(flare_index))
 
 
-def loop_light_curve_fit(eve_lines_event, jedi_row, flare_index, uncertainty,
-                         verbose=False):
+def loop_light_curve_fit(eve_lines_event, jedi_row, flare_index, uncertainty):
     """Loop through all of the light curves for an event (flare_index) and fit them
 
     Inputs:
@@ -586,7 +573,7 @@ def loop_light_curve_fit(eve_lines_event, jedi_row, flare_index, uncertainty,
         uncertainty [numpy array]:          An array containing the uncertainty of each irradiance value. TODO: Needs to be properly populated.
 
     Optional Inputs:
-        verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
+        None.
 
     Outputs:
         No new outputs; appends to eve_lines_event and fills in jedi_row
@@ -595,10 +582,9 @@ def loop_light_curve_fit(eve_lines_event, jedi_row, flare_index, uncertainty,
         None
 
     Example:
-        loop_light_curve_fit(eve_lines_event, jedi_row, flare_index, uncertainty,
-                             verbose=verbose)
+        loop_light_curve_fit(eve_lines_event, jedi_row, flare_index, uncertainty)
     """
-    if verbose:
+    if jedi_config.verbose:
         jedi_config.logger.info("Fitting light curves for event {0}.".format(flare_index))
 
     for i, column in enumerate(eve_lines_event):
@@ -619,7 +605,6 @@ def loop_light_curve_fit(eve_lines_event, jedi_row, flare_index, uncertainty,
             light_curve_fit_df, best_fit_gamma, best_fit_score = light_curve_fit(eve_line_event,
                                                                                  gamma=np.array([5e-8]),
                                                                                  plots_save_path='{0}Event {1} {2} '.format(fitting_path, flare_index, column),
-                                                                                 verbose=jedi_config.verbose,
                                                                                  logger=jedi_config.logger,
                                                                                  n_jobs=jedi_config.n_threads)
             eve_lines_event[column] = light_curve_fit_df  # TODO: Verify that I don't have to pass this back, i.e., this changes the df outside of this function
@@ -630,8 +615,7 @@ def loop_light_curve_fit(eve_lines_event, jedi_row, flare_index, uncertainty,
                 jedi_config.logger.info('Event {0} {1} light curves fitted.'.format(flare_index, column))
 
 
-def determine_dimming_parameters(eve_lines_event, jedi_row, flare_index,
-                                 verbose=False):
+def determine_dimming_parameters(eve_lines_event, jedi_row, flare_index):
     """For every light curve, determine the dimming parameters (depth, slope, duration) wherever possible
 
     Inputs:
@@ -640,19 +624,18 @@ def determine_dimming_parameters(eve_lines_event, jedi_row, flare_index,
         flare_index [int]:                  The identifier for which event in JEDI to process.
 
     Optional Inputs:
-        verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
+        None.
 
     Outputs:
         No new outputs; appends to eve_lines_event and fills in jedi_row
 
     Optional Outputs:
-        None
+        None.
 
     Example:
-        determine_dimming_parameters(eve_lines_event, jedi_row, flare_index,
-                                     verbose=verbose)
+        determine_dimming_parameters(eve_lines_event, jedi_row, flare_index)
     """
-    if verbose:
+    if jedi_config.verbose:
         jedi_config.logger.info("Fitting light curves for event {0}.".format(flare_index))
 
     for column in eve_lines_event:
@@ -681,7 +664,7 @@ def determine_dimming_parameters(eve_lines_event, jedi_row, flare_index,
             plt.close('all')
             depth_percent, depth_time = determine_dimming_depth(eve_line_event,
                                                                 plot_path_filename='{0}Event {1} {2} Depth.png'.format(depth_path, flare_index, column),
-                                                                verbose=jedi_config.verbose, logger=jedi_config.logger)
+                                                                logger=jedi_config.logger)
 
             jedi_row[column + ' Depth [%]'] = depth_percent  # TODO: Verify that I don't have to pass this back, i.e., this changes the df outside of this function
             # jedi_row[column + ' Depth Uncertainty [%]'] = depth_uncertainty  # TODO: make determine_dimming_depth return the propagated uncertainty
@@ -704,7 +687,7 @@ def determine_dimming_parameters(eve_lines_event, jedi_row, flare_index,
                                                                            earliest_allowed_time=slope_start_time,
                                                                            latest_allowed_time=slope_end_time,
                                                                            plot_path_filename='{0}Event {1} {2} Slope.png'.format(slope_path, flare_index, column),
-                                                                           verbose=jedi_config.verbose, logger=jedi_config.logger)
+                                                                           logger=jedi_config.logger)
 
                 jedi_row[column + ' Slope Min [%/s]'] = slope_min
                 jedi_row[column + ' Slope Max [%/s]'] = slope_max
@@ -722,7 +705,6 @@ def determine_dimming_parameters(eve_lines_event, jedi_row, flare_index,
                 duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(eve_line_event,
                                                                                                       earliest_allowed_time=slope_start_time,
                                                                                                       plot_path_filename='{0}Event {1} {2} Duration.png'.format(duration_path, flare_index, column),
-                                                                                                      verbose=jedi_config.verbose,
                                                                                                       logger=jedi_config.logger)
 
                 jedi_row[column + ' Duration [s]'] = duration_seconds
@@ -733,8 +715,7 @@ def determine_dimming_parameters(eve_lines_event, jedi_row, flare_index,
                 jedi_config.logger.info("Event {0} {1} parameterizations complete.".format(flare_index, column))
 
 
-def produce_summary_plot(eve_lines_event, jedi_row, flare_index,
-                         verbose=False):
+def produce_summary_plot(eve_lines_event, jedi_row, flare_index):
     """Make a plot of the fitted light curve, annotated with every dimming parameter that could be determined
 
     Inputs:
@@ -743,19 +724,18 @@ def produce_summary_plot(eve_lines_event, jedi_row, flare_index,
         flare_index [int]:                  The identifier for which event in JEDI to process.
 
     Optional Inputs:
-        verbose [bool]:     Set to log the processing messages to disk and console. Default is False.
+        None.
 
     Outputs:
         Creates a .png file on disk for the plot
 
     Optional Outputs:
-        None
+        None.
 
     Example:
-        produce_summary_plot(eve_lines_event, jedi_row, flare_index,
-                             verbose=verbose)
+        produce_summary_plot(eve_lines_event, jedi_row, flare_index)
     """
-    if verbose:
+    if jedi_config.verbose:
         jedi_config.logger.info("Fitting light curves for event {0}.".format(flare_index))
 
     # Produce a summary plot for each light curve
@@ -817,8 +797,7 @@ def produce_summary_plot(eve_lines_event, jedi_row, flare_index,
             jedi_config.logger.info("Summary plot saved to %s" % summary_filename)
 
 
-def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
-                             verbose=False):
+def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'):
     """Function for merging the .csv output files of generate_jedi_catalog()
 
     Inputs:
@@ -827,17 +806,15 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
     Optional Inputs:
         file_path [str]: Set to a path for saving the JEDI catalog table.
                          Default is '/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
-        verbose [bool]:  Set to log the processing messages to console. Default is False.
 
     Outputs:
         No direct return, but writes a csv to disk with the dimming parameterization results.
 
     Optional Outputs:
-        None
+        None.
 
     Example:
-        generate_jedi_catalog(output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/',
-                              verbose=True)
+        generate_jedi_catalog(output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/')
     """
     # Create one sorted, clean dataframe from all of the csv files
     list_dfs = []
@@ -850,13 +827,13 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
     jedi_catalog_df.drop_duplicates(inplace=True)
     jedi_catalog_df.sort_values(by=['Event #'], inplace=True)
     jedi_catalog_df.reset_index(drop=True, inplace=True)
-    if verbose:
+    if jedi_config.verbose:
         print("Read files, sorted, dropped empty and duplicate rows, and reset index.")
 
     # Write the catalog to disk
     csv_filename = file_path + 'jedi_merged_{0}.csv'.format(Time.now().iso)
     jedi_catalog_df.to_csv(csv_filename, header=True, index=False, mode='w')
-    if verbose:
+    if jedi_config.verbose:
         print("Wrote merged file to {0}".format(csv_filename))
 
     return 1
@@ -866,7 +843,7 @@ if __name__ == '__main__':
     # Parallel processing method
     # with mp.Pool(processes=6) as pool:
     #     for events in range(78, 148, 5):
-    #         generate_jedi_catalog_function_1_varying_input = partial(generate_jedi_catalog, verbose=True)
+    #         generate_jedi_catalog_function_1_varying_input = partial(generate_jedi_catalog)
     #         print('Should be running from {0} to {1}'.format(events, events + 5))
     #         pool.map(generate_jedi_catalog, range(events, events + 5))
     

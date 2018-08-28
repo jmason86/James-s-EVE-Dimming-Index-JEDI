@@ -13,7 +13,7 @@ __contact__ = 'jmason86@gmail.com'
 
 def determine_dimming_depth(light_curve_df,
                             earliest_allowed_time=None, latest_allowed_time=None, smooth_points=0,
-                            plot_path_filename=None, verbose=False):
+                            plot_path_filename=None):
     """Find the depth of dimming in a light curve, if any.
     Assumes light curve is normalized such that pre-flare = 0%.
 
@@ -29,7 +29,6 @@ def determine_dimming_depth(light_curve_df,
                                           Default is 0, meaning no smoothing will be performed.
         plot_path_filename [str]:         Set to a path and filename in order to save the summary plot to disk.
                                           Default is None, meaning the plot will not be saved to disk.
-        verbose [bool]:                   Set to log the processing messages to disk and console. Default is False.
 
     Outputs:
         depth_percent [float]:     The depth of dimming in percent terms. np.nan if failed to determine.
@@ -40,28 +39,27 @@ def determine_dimming_depth(light_curve_df,
 
     Example:
         depth_percent, depth_time = determine_dimming_depth(light_curve_df,
-                                                            plot_path_filename='./bla.png',
-                                                            verbose=True)
+                                                            plot_path_filename='./bla.png')
     """
-    if verbose:
+    if jedi_config.verbose:
         jedi_config.logger.info("Running on event with light curve start time of {0}.".format(light_curve_df.index[0]))
 
     # If no earliest_allowed_time set, then set it to beginning of light_curve_df
     if not earliest_allowed_time:
         earliest_allowed_time = light_curve_df.index[0]
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.info("No earliest allowed time provided. Setting to beginning of light curve: {0}".format(earliest_allowed_time))
 
     # If no latest_allowed_time set, then set it to end of light_curve_df
     if not latest_allowed_time:
         latest_allowed_time = light_curve_df.index[-1]
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.info("No latest allowed time provided. Setting to end of light curve: {0}".format(latest_allowed_time))
 
     # Optionally smooth the light curve with a rolling mean
     if smooth_points:
         light_curve_df['irradiance'] = light_curve_df.rolling(smooth_points, center=True).mean()
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.info('Applied {0} point smooth.'.format(smooth_points))
 
     first_non_nan = light_curve_df['irradiance'].first_valid_index()
@@ -72,7 +70,7 @@ def determine_dimming_depth(light_curve_df,
     minima_indices = argrelmin(light_curve_df['irradiance'].values)[0]
     minima_times = light_curve_df.index[minima_indices]
     minima_irradiances = light_curve_df['irradiance'].values[minima_indices]
-    if verbose:
+    if jedi_config.verbose:
         if minima_indices.size > 0:
             jedi_config.logger.info('Found {0} local minima.'.format(minima_indices.size))
         else:
@@ -84,12 +82,12 @@ def determine_dimming_depth(light_curve_df,
         depth_index = less_than_zero_indices[0]  # First one
         depth_time = light_curve_df.index[depth_index]
         depth = np.abs(light_curve_df['irradiance'].values[depth_index])
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.info('Depth determiend to be {0:.2f} at {1}'.format(depth, depth_time))
     else:
         depth = np.nan
         depth_time = np.nan
-        if verbose and minima_indices.size > 0:
+        if jedi_config.verbose and minima_indices.size > 0:
             jedi_config.logger.warning('None of the minima are below 0.')
 
     # Produce a summary plot
@@ -126,7 +124,7 @@ def determine_dimming_depth(light_curve_df,
                          ha='right', va='center', rotation=90, size=18, color='goldenrod')
 
         plt.savefig(plot_path_filename)
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.info("Summary plot saved to %s" % plot_path_filename)
 
     # Return the depth

@@ -14,7 +14,7 @@ __contact__ = 'jmason86@gmail.com'
 
 def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve_to_subtract_with_df, estimated_time_of_peak,
                                     max_seconds_shift=1800,
-                                    plot_path_filename=None, verbose=False):
+                                    plot_path_filename=None):
     """Align the peak of a second light curve to the first, scale its magnitude to match, and subtract it off.
 
     Inputs:
@@ -26,7 +26,6 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
         max_seconds_shift [int]:  The maximum allowed time shift in seconds to get the peaks to match.
         plot_path_filename [str]: Set to a path and filename in order to save the summary plot to disk.
                                   Default is None, meaning the plot will not be saved to disk.
-        verbose [bool]:           Set to log the processing messages to disk and console. Default is False.
 
     Outputs:
         light_curve_corrected_df [pd DataFrame]: A pandas DataFrame with the same format as light_curve_to_subtract_from_df but
@@ -46,10 +45,9 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
         light_curve_corrected_df, seconds_shift, scale_factor = light_curve_peak_match_subtract(light_curve_to_subtract_from_df,
                                                                                                 light_curve_to_subtract_with_df,
                                                                                                 estimated_time_of_peak,
-                                                                                                plot_path_filename='./',
-                                                                                                verbose=True)
+                                                                                                plot_path_filename='./')
     """
-    if verbose:
+    if jedi_config.verbose:
         jedi_config.logger.info("Running on event with light curve start time of {0}.".format(light_curve_to_subtract_from_df.index[0]))
 
     # Drop NaNs since peakutils can't handle them
@@ -59,12 +57,12 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
     # Check that the two input light curves have the same length and return NaN if not
     # This is to handle the (numerous) cases where MEGS-B cadence is < MEGS-A and vice versa
     if len(light_curve_to_subtract_from_df) != len(light_curve_to_subtract_with_df):
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.warning('Input light curves have different length, i.e. cadence. Must skip.')
         return np.nan, np.nan, np.nan
 
     # Detrend and find the peaks that are ≥ 95% of the max irradiance within
-    if verbose:
+    if jedi_config.verbose:
         jedi_config.logger.info("Detrending light curves.")
     if (light_curve_to_subtract_from_df['irradiance'].values < 0).all():
         light_curve_to_subtract_from_df.iloc[0] = 1  # Else can crash peakutils.baseline
@@ -79,16 +77,16 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
     indices_with = peakutils.indexes(detrend_with.values.squeeze(), thres=0.95)
 
     if len(indices_from) == 0:
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.warning('Could not find peak in light curve to subtract from.')
         return np.nan, np.nan, np.nan
     if len(indices_with) == 0:
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.warning('Could not find peak in light curve to subtract with.')
         return np.nan, np.nan, np.nan
 
     # Identify the peak closest to the input estimated peak time (e.g., from GOES/XRS)
-    if verbose:
+    if jedi_config.verbose:
         jedi_config.logger.info("Identifying peaks closest to initial guess in light curves.")
     peak_index_from = indices_from[closest(light_curve_to_subtract_from_df.index[indices_from], estimated_time_of_peak)]
     peak_index_with = indices_with[closest(light_curve_to_subtract_with_df.index[indices_with], estimated_time_of_peak)]
@@ -102,13 +100,13 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
     # Fail if seconds_shift > max_seconds_shift
     isTimeShiftValid = True
     if abs(seconds_shift) > max_seconds_shift:
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.warning("Cannot do peak match. Time shift of {0} seconds is greater than max allowed shift of {1} seconds.".format(seconds_shift, max_seconds_shift))
         isTimeShiftValid = False
 
     # Shift the subtract_with light curve in time to align its peak to the subtract_from light curve
     if isTimeShiftValid:
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.info("Shifting and scaling the light curve to subtract with.")
         shifted_with = light_curve_to_subtract_with_df.shift(index_shift)
 
@@ -117,7 +115,7 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
         shifted_scaled_with = shifted_with * scale_factor
         light_curve_corrected_df = light_curve_to_subtract_from_df - shifted_scaled_with
 
-        if verbose:
+        if jedi_config.verbose:
             if light_curve_corrected_df.isnull().values.sum() > 1:
                 jedi_config.logger.warning("%s points were shifted to become NaN." % light_curve_corrected_df.isnull().values.sum())
             jedi_config.logger.info("Light curve peak matching and subtraction complete.")
@@ -163,7 +161,7 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
             os.makedirs(path)
         plt.savefig(plot_path_filename)
 
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.info("Summary plot saved to %s" % plot_path_filename)
 
     if isTimeShiftValid:

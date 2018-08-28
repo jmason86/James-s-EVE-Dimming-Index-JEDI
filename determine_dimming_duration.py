@@ -12,7 +12,7 @@ __contact__ = 'jmason86@gmail.com'
 
 def determine_dimming_duration(light_curve_df,
                                earliest_allowed_time=None, smooth_points=0,
-                               plot_path_filename=None, verbose=False):
+                               plot_path_filename=None):
     """Find the duration of dimming in a light curve, if any.
     Assumes light curve is normalized such that pre-flare = 0%.
 
@@ -26,7 +26,6 @@ def determine_dimming_duration(light_curve_df,
                                           Default is 0, meaning no smoothing will be performed.
         plot_path_filename [str]:         Set to a path and filename in order to save the summary plot to disk.
                                           Default is None, meaning the plot will not be saved to disk.
-        verbose [bool]:                   Set to log the processing messages to disk and console. Default is False.
 
     Outputs:
         duration_seconds [integer]:         The duration of dimming in seconds.
@@ -38,14 +37,13 @@ def determine_dimming_duration(light_curve_df,
 
     Example:
         duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(light_curve_df,
-                                                                                              plot_path_filename='./bla.png',
-                                                                                              verbose=True)
+                                                                                              plot_path_filename='./bla.png')
     """
     # If no earliest_allowed_time set, then set it to beginning of light_curve_df
     if not earliest_allowed_time:
         earliest_allowed_time = pd.Timestamp(light_curve_df.index.values[0])
 
-    if verbose:
+    if jedi_config.verbose:
         jedi_config.logger.info("Running on event with light curve start time of {0}.".format(light_curve_df.index[0]))
 
     # Set up a successful processing flag
@@ -68,7 +66,7 @@ def determine_dimming_duration(light_curve_df,
     # Discard any indices prior to the user-provided earliest_allowed_time, else cannot compute
     zero_crossing_indices = zero_crossing_indices[zero_crossing_times > earliest_allowed_time]
     if zero_crossing_indices.size == 0:
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.warning('No zero crossings detected after earliest allowed time of %s' % earliest_allowed_time)
         found_duration = False
 
@@ -83,7 +81,7 @@ def determine_dimming_duration(light_curve_df,
             first_neg_zero_crossing_index = neg_zero_crossing_indices[0]
             first_neg_zero_crossing_time = light_curve_df.index[zero_crossing_indices[first_neg_zero_crossing_index]]
         else:
-            if verbose:
+            if jedi_config.verbose:
                 jedi_config.logger.warning('No negative slope 0-crossing found. Duration cannot be defined.')
             found_duration = False
 
@@ -94,13 +92,13 @@ def determine_dimming_duration(light_curve_df,
             first_pos_zero_crossing_index = pos_zero_crossing_indices[0]
             first_pos_zero_crossing_time = light_curve_df.index[zero_crossing_indices[first_pos_zero_crossing_index]]
         else:
-            if verbose:
+            if jedi_config.verbose:
                 jedi_config.logger.warning('No positive slope 0-crossing found. Duration cannot be defined.')
             found_duration = False
 
     # If the first negative slope zero crossing isn't earlier than the positive one, return null
     if (found_duration) and (first_neg_zero_crossing_time > first_pos_zero_crossing_time):
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.warning('Dimming light curve may be misaligned in window. Negative slope 0-crossing detected after positive one.')
         found_duration = False
 
@@ -137,7 +135,7 @@ def determine_dimming_duration(light_curve_df,
             plt.annotate(str(duration_seconds) + ' s', xy=(mid_time, 0), xycoords='data', ha='center', va='bottom', size=18)
 
         plt.savefig(plot_path_filename)
-        if verbose:
+        if jedi_config.verbose:
             jedi_config.logger.info("Summary plot saved to %s" % plot_path_filename)
 
     if not found_duration:
