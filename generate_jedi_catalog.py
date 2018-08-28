@@ -178,36 +178,8 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
             # TODO: Propagate uncertainty through light_curve_peak_match_subtract and store in eve_lines_event
 
             # Fit the light curves to reduce influence of noise on the parameterizations to come later
-            #progress_bar_fitting = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Light curve fitting: ')] + widgets,
-            #                                               max_value=len(eve_lines_event.columns)).start()
             time_fitting = time.time()
-
-            for i, column in enumerate(eve_lines_event):
-                if eve_lines_event[column].isnull().all().all():
-                    if jedi_config.verbose:
-                        jedi_config.logger.info('Event {0} {1} fitting skipped because all irradiances are NaN.'.format(flare_index, column))
-                else:
-                    eve_line_event = pd.DataFrame(eve_lines_event[column])
-                    eve_line_event.columns = ['irradiance']
-                    eve_line_event['uncertainty'] = uncertainty
-
-                    fitting_path = output_path + 'Fitting/'
-                    if not os.path.exists(fitting_path):
-                        os.makedirs(fitting_path)
-
-                    plt.close('all')
-                    light_curve_fit_df, best_fit_gamma, best_fit_score = light_curve_fit(eve_line_event,
-                                                                                         gamma=np.array([5e-8]),
-                                                                                         plots_save_path='{0}Event {1} {2} '.format(fitting_path, flare_index, column))
-                    eve_lines_event[column] = light_curve_fit_df
-                    jedi_row[column + ' Fitting Gamma'] = best_fit_gamma
-                    jedi_row[column + ' Fitting Score'] = best_fit_score
-
-                    if jedi_config.verbose:
-                        jedi_config.logger.info('Event {0} {1} light curves fitted.'.format(flare_index, column))
-                    #progress_bar_fitting.update(i)
-
-            #progress_bar_fitting.finish()
+            loop_light_curve_fit(eve_lines_event, flare_index, uncertainty)
             print('Time to do fitting [s]: {0}'.format(time.time() - time_fitting))
 
             # Save the dimming event data to disk for quicker restore
@@ -243,8 +215,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
 
                 plt.close('all')
                 depth_percent, depth_time = determine_dimming_depth(eve_line_event,
-                                                                    plot_path_filename='{0}Event {1} {2} Depth.png'.format(depth_path, flare_index, column),
-                                                                    logger=jedi_config.logger)
+                                                                    plot_path_filename='{0}Event {1} {2} Depth.png'.format(depth_path, flare_index, column))
 
                 jedi_row[column + ' Depth [%]'] = depth_percent
                 # jedi_row[column + ' Depth Uncertainty [%]'] = depth_uncertainty  # TODO: make determine_dimming_depth return the propagated uncertainty
@@ -266,8 +237,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
                     slope_min, slope_max, slope_mean = determine_dimming_slope(eve_line_event,
                                                                                earliest_allowed_time=slope_start_time,
                                                                                latest_allowed_time=slope_end_time,
-                                                                               plot_path_filename='{0}Event {1} {2} Slope.png'.format(slope_path, flare_index, column),
-                                                                               logger=jedi_config.logger)
+                                                                               plot_path_filename='{0}Event {1} {2} Slope.png'.format(slope_path, flare_index, column))
 
                     jedi_row[column + ' Slope Min [%/s]'] = slope_min
                     jedi_row[column + ' Slope Max [%/s]'] = slope_max
@@ -284,8 +254,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
                     plt.close('all')
                     duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(eve_line_event,
                                                                                                           earliest_allowed_time=slope_start_time,
-                                                                                                          plot_path_filename='{0}Event {1} {2} Duration.png'.format(duration_path, flare_index, column),
-                                                                                                          logger=jedi_config.logger)
+                                                                                                          plot_path_filename='{0}Event {1} {2} Duration.png'.format(duration_path, flare_index, column))
 
                     jedi_row[column + ' Duration [s]'] = duration_seconds
                     jedi_row[column + ' Duration Start Time'] = duration_start_time
@@ -542,10 +511,8 @@ def loop_light_curve_fit(eve_lines_event, flare_index, uncertainty):
             plt.close('all')
             light_curve_fit_df, best_fit_gamma, best_fit_score = light_curve_fit(eve_line_event,
                                                                                  gamma=np.array([5e-8]),
-                                                                                 plots_save_path='{0}Event {1} {2} '.format(fitting_path, flare_index, column),
-                                                                                 logger=jedi_config.logger,
-                                                                                 n_jobs=jedi_config.n_threads)
-            eve_lines_event[column] = light_curve_fit_df  # TODO: Verify that I don't have to pass this back, i.e., this changes the df outside of this function
+                                                                                 plots_save_path='{0}Event {1} {2}'.format(fitting_path, flare_index, column))
+            eve_lines_event[column] = light_curve_fit_df
             jedi_row[column + ' Fitting Gamma'] = best_fit_gamma
             jedi_row[column + ' Fitting Score'] = best_fit_score
 
@@ -601,8 +568,7 @@ def determine_dimming_parameters(eve_lines_event, jedi_row, flare_index):
 
             plt.close('all')
             depth_percent, depth_time = determine_dimming_depth(eve_line_event,
-                                                                plot_path_filename='{0}Event {1} {2} Depth.png'.format(depth_path, flare_index, column),
-                                                                logger=jedi_config.logger)
+                                                                plot_path_filename='{0}Event {1} {2} Depth.png'.format(depth_path, flare_index, column))
 
             jedi_row[column + ' Depth [%]'] = depth_percent  # TODO: Verify that I don't have to pass this back, i.e., this changes the df outside of this function
             # jedi_row[column + ' Depth Uncertainty [%]'] = depth_uncertainty  # TODO: make determine_dimming_depth return the propagated uncertainty
@@ -624,8 +590,7 @@ def determine_dimming_parameters(eve_lines_event, jedi_row, flare_index):
                 slope_min, slope_max, slope_mean = determine_dimming_slope(eve_line_event,
                                                                            earliest_allowed_time=slope_start_time,
                                                                            latest_allowed_time=slope_end_time,
-                                                                           plot_path_filename='{0}Event {1} {2} Slope.png'.format(slope_path, flare_index, column),
-                                                                           logger=jedi_config.logger)
+                                                                           plot_path_filename='{0}Event {1} {2} Slope.png'.format(slope_path, flare_index, column))
 
                 jedi_row[column + ' Slope Min [%/s]'] = slope_min
                 jedi_row[column + ' Slope Max [%/s]'] = slope_max
@@ -642,8 +607,7 @@ def determine_dimming_parameters(eve_lines_event, jedi_row, flare_index):
                 plt.close('all')
                 duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(eve_line_event,
                                                                                                       earliest_allowed_time=slope_start_time,
-                                                                                                      plot_path_filename='{0}Event {1} {2} Duration.png'.format(duration_path, flare_index, column),
-                                                                                                      logger=jedi_config.logger)
+                                                                                                      plot_path_filename='{0}Event {1} {2} Duration.png'.format(duration_path, flare_index, column))
 
                 jedi_row[column + ' Duration [s]'] = duration_seconds
                 jedi_row[column + ' Duration Start Time'] = duration_start_time

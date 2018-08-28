@@ -54,6 +54,10 @@ def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10),
     X = metatimes_to_seconds_since_start(light_curve_df.index)
     y = light_curve_df['irradiance'].values
 
+    # Make sure the dtype is float rather than object so numpy doesn't crash
+    if y.dtype == 'O':
+        y = y.astype(np.float64)
+
     # Check for NaNs and issue warning that they are being removed from the dataset
     if jedi_config.verbose:
         if np.isnan(y).any():
