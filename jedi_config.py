@@ -29,6 +29,8 @@ goes_flare_events = None
 logger = None
 jedi_csv_filename = None
 preflare_csv_filename = None
+ion_tuples = None
+ion_permutations = None
 
 
 def init():
@@ -130,6 +132,7 @@ def init_jedi_row():
                              ('Flare Interrupt', np.nan)])])
 
     # Define the combination of columns of the JEDI catalog
+    global ion_tuples, ion_permutations
     ion_tuples = list(itertools.permutations(eve_lines.columns.values, 2))
     ion_permutations = pd.Index([' by '.join(ion_tuples[i]) for i in range(len(ion_tuples))])
 

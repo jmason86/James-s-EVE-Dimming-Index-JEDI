@@ -29,6 +29,9 @@ from determine_dimming_duration import determine_dimming_duration
 # Configuration
 import jedi_config
 
+# Global variables
+jedi_row = pd.DataFrame()
+
 __author__ = 'James Paul Mason'
 __contact__ = 'jmason86@gmail.com'
 
@@ -86,6 +89,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
     jedi_config.init()
 
     # Define the columns of the JEDI catalog
+    global jedi_row
     jedi_row = jedi_config.init_jedi_row()
 
     if jedi_config.verbose:
@@ -153,79 +157,19 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
 
             # Clip EVE data to dimming window
             eve_lines_event = clip_eve_data_to_dimming_window(flare_index)
-            
-            bracket_time_left = (jedi_config.goes_flare_events['peak_time'][flare_index] + (dimming_window_relative_to_flare_minutes_left * u.minute))
-            next_flare_time = Time((jedi_config.goes_flare_events['peak_time'][flare_index + 1]).iso)
-            user_choice_time = (jedi_config.goes_flare_events['peak_time'][flare_index] + (dimming_window_relative_to_flare_minutes_right * u.minute))
-            bracket_time_right = min(next_flare_time, user_choice_time)
-
-            # If flare is shortening the window, set the flare_interrupt flag
-            if bracket_time_right == next_flare_time:
-                flare_interrupt = True
-                if jedi_config.verbose:
-                    jedi_config.logger.info('Flare interrupt for event at {0} by flare at {1}'.format(jedi_config.goes_flare_events['peak_time'][flare_index].iso, next_flare_time))
-
-            # Write flare_interrupt to JEDI row
-            jedi_row['Flare Interrupt'] = flare_interrupt
-
-            # Skip event if the dimming window is too short
-            if ((bracket_time_right - bracket_time_left).sec / 60.0) < threshold_minimum_dimming_window_minutes:
-                # Leave all dimming parameters as NaN and write this null result to the CSV on disk
-                jedi_row.to_csv(csv_filename, header=False, index=False, mode='a')
-
-                # Log message
-                if jedi_config.verbose:
-                    jedi_config.logger.info('The dimming window duration of {0} minutes is shorter than the minimum threshold of {1} minutes. Skipping this event ({2})'
-                                .format(((bracket_time_right - bracket_time_left).sec / 60.0), threshold_minimum_dimming_window_minutes, jedi_config.goes_flare_events['peak_time'][flare_index]))
-
-                # Skip the rest of the processing in the flare_index loop
+            if eve_lines_event is False:
                 continue
-            else:
-                eve_lines_event = eve_lines[bracket_time_left.iso:bracket_time_right.iso]
 
-            if jedi_config.verbose:
-                jedi_config. \
-                    jedi_config. \
-                    jedi_config.logger.info("Event {0} EVE data clipped to dimming window.".format(flare_index))
-
-            # Convert irradiance units to percent
-            # (in place, don't care about absolute units from this point forward)
-            eve_lines_event = (eve_lines_event - preflare_irradiance) / preflare_irradiance * 100.0
+            # Convert irradiance units to percent (in place, don't care about absolute units from this point forward)
+            preflare_irradiances = preflare_df.iloc[map_flare_index_to_preflare_index(flare_index)].filter(regex="\d").values
+            eve_lines_event = (eve_lines_event - preflare_irradiances) / preflare_irradiances * 100.0
 
             if jedi_config.verbose:
                 jedi_config.logger.info("Event {0} irradiance converted from absolute to percent units.".format(flare_index))
 
             # Do flare removal in the light curves and add the results to the DataFrame
-            #progress_bar_correction = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Peak match subtract: ')] + widgets,
-            #                                                  max_value=len(ion_tuples)).start()
             time_correction = time.time()
-
-            for i in range(len(ion_tuples)):
-                light_curve_to_subtract_from_df = pd.DataFrame(eve_lines_event[ion_tuples[i][0]])
-                light_curve_to_subtract_from_df.columns = ['irradiance']
-                light_curve_to_subtract_with_df = pd.DataFrame(eve_lines_event[ion_tuples[i][1]])
-                light_curve_to_subtract_with_df.columns = ['irradiance']
-
-                if (light_curve_to_subtract_from_df.isnull().all().all()) or (light_curve_to_subtract_with_df.isnull().all().all()):
-                    if jedi_config.verbose:
-                        jedi_config.logger.info('Event {0} {1} correction skipped because all irradiances are NaN.'.format(flare_index, ion_permutations[i]))
-                else:
-                    light_curve_corrected, seconds_shift, scale_factor = light_curve_peak_match_subtract(light_curve_to_subtract_from_df,
-                                                                                                         light_curve_to_subtract_with_df,
-                                                                                                         pd.Timestamp((jedi_config.goes_flare_events['peak_time'][flare_index]).iso),
-                                                                                                         plot_path_filename=output_path + 'Peak Subtractions/Event {0} {1}.png'.format(flare_index, ion_permutations[i]))
-
-                    eve_lines_event[ion_permutations[i]] = light_curve_corrected
-                    jedi_row[ion_permutations[i] + ' Correction Time Shift [s]'] = seconds_shift
-                    jedi_row[ion_permutations[i] + ' Correction Scale Factor'] = scale_factor
-
-                    plt.close('all')
-
-                    if jedi_config.verbose:
-                        jedi_config.logger.info('Event {0} flare removal correction complete'.format(flare_index))
-                    #progress_bar_correction.update(i)
-
-            #progress_bar_correction.finish()
+            loop_light_curve_peak_match_subtract(eve_lines_event, flare_index)
             print('Time to do peak match subtract [s]: {0}'.format(time.time() - time_correction))
 
             # TODO: Update calculate_eve_fe_line_precision to compute for all emission lines, not just selected
@@ -495,9 +439,9 @@ def clip_eve_data_to_dimming_window(flare_index):
         if jedi_config.verbose:
             jedi_config.logger.info(
                 'The dimming window duration of {0} minutes is shorter than the minimum threshold of {1} minutes. Skipping this event ({2})'
-                    .format(((bracket_time_right - bracket_time_left).sec / 60.0),
-                            jedi_config.threshold_minimum_dimming_window_minutes,
-                            jedi_config.goes_flare_events['peak_time'][flare_index]))
+                .format(((bracket_time_right - bracket_time_left).sec / 60.0),
+                        jedi_config.threshold_minimum_dimming_window_minutes,
+                        jedi_config.goes_flare_events['peak_time'][flare_index]))
 
         eve_lines_event = False
 
@@ -509,15 +453,12 @@ def clip_eve_data_to_dimming_window(flare_index):
     return eve_lines_event
 
 
-def loop_light_curve_peak_match_subtract(eve_lines_event, jedi_row, flare_index, ion_tuples, ion_permutations):
+def loop_light_curve_peak_match_subtract(eve_lines_event, flare_index):
     """Loop through all of the ion permutations, match the pairs of light curves at the flare peak and subtract them
 
     Inputs:
         eve_lines_event [pandas DataFrame]: The (39) EVE extracted emission lines (columns) trimmed in time (rows).
-        jedi_row [pandas DataFrame]:        A ~24k column DataFrame with only a single row.
         flare_index [int]:                  The identifier for which event in JEDI to process.
-        ion_tuples [list of tuples]:        Every pair-permutation of the 39 extracted EVE emission lines.
-        ion_permutations [string array]:    Every pair-permutation of the 39 extracted EVE emission lines with "by" between them.
 
     Optional Inputs:
         None.
@@ -529,33 +470,31 @@ def loop_light_curve_peak_match_subtract(eve_lines_event, jedi_row, flare_index,
         None.
 
     Example:
-        loop_light_curve_peak_match_subtract(eve_lines_event, jedi_row, flare_index, ion_tuples, ion_permutations)
+        loop_light_curve_peak_match_subtract(eve_lines_event, flare_index)
     """
     if jedi_config.verbose:
         jedi_config.logger.info("Clipping EVE data in time for event {0}.".format(flare_index))
 
-    for i in range(len(ion_tuples)):
-        light_curve_to_subtract_from_df = pd.DataFrame(eve_lines_event[ion_tuples[i][0]])
+    for i in range(len(jedi_config.ion_tuples)):
+        light_curve_to_subtract_from_df = pd.DataFrame(eve_lines_event[jedi_config.ion_tuples[i][0]])
         light_curve_to_subtract_from_df.columns = ['irradiance']
-        light_curve_to_subtract_with_df = pd.DataFrame(eve_lines_event[ion_tuples[i][1]])
+        light_curve_to_subtract_with_df = pd.DataFrame(eve_lines_event[jedi_config.ion_tuples[i][1]])
         light_curve_to_subtract_with_df.columns = ['irradiance']
 
         if (light_curve_to_subtract_from_df.isnull().all().all()) or (light_curve_to_subtract_with_df.isnull().all().all()):
             if jedi_config.verbose:
                 jedi_config.logger.info(
                     'Event {0} {1} correction skipped because all irradiances are NaN.'.format(flare_index,
-                                                                                               ion_permutations[i]))
+                                                                                               jedi_config.ion_permutations[i]))
         else:
-            light_curve_corrected, seconds_shift, scale_factor = light_curve_peak_match_subtract(
-                                                                                                 light_curve_to_subtract_from_df,
+            light_curve_corrected, seconds_shift, scale_factor = light_curve_peak_match_subtract(light_curve_to_subtract_from_df,
                                                                                                  light_curve_to_subtract_with_df,
                                                                                                  pd.Timestamp((jedi_config.goes_flare_events['peak_time'][flare_index]).iso),
-                                                                                                 plot_path_filename=jedi_config.output_path + 'Peak Subtractions/Event {0} {1}.png'.format(flare_index, ion_permutations[i]),
-                                                                                                 logger=jedi_config.logger)
+                                                                                                 plot_path_filename=jedi_config.output_path + 'Peak Subtractions/Event {0} {1}.png'.format(flare_index, jedi_config.ion_permutations[i]))
 
-            eve_lines_event[ion_permutations[i]] = light_curve_corrected  # TODO: Verify that I don't have to pass this back, i.e., this changes the df outside of this function
-            jedi_row[ion_permutations[i] + ' Correction Time Shift [s]'] = seconds_shift
-            jedi_row[ion_permutations[i] + ' Correction Scale Factor'] = scale_factor
+            eve_lines_event[jedi_config.ion_permutations[i]] = light_curve_corrected
+            jedi_row[jedi_config.ion_permutations[i] + ' Correction Time Shift [s]'] = seconds_shift
+            jedi_row[jedi_config.ion_permutations[i] + ' Correction Scale Factor'] = scale_factor
 
             plt.close('all')
 
@@ -563,12 +502,11 @@ def loop_light_curve_peak_match_subtract(eve_lines_event, jedi_row, flare_index,
                 jedi_config.logger.info('Event {0} flare removal correction complete'.format(flare_index))
 
 
-def loop_light_curve_fit(eve_lines_event, jedi_row, flare_index, uncertainty):
+def loop_light_curve_fit(eve_lines_event, flare_index, uncertainty):
     """Loop through all of the light curves for an event (flare_index) and fit them
 
     Inputs:
         eve_lines_event [pandas DataFrame]: The (39) EVE extracted emission lines (columns) trimmed in time (rows).
-        jedi_row [pandas DataFrame]:        A ~24k column DataFrame with only a single row.
         flare_index [int]:                  The identifier for which event in JEDI to process.
         uncertainty [numpy array]:          An array containing the uncertainty of each irradiance value. TODO: Needs to be properly populated.
 
@@ -579,7 +517,7 @@ def loop_light_curve_fit(eve_lines_event, jedi_row, flare_index, uncertainty):
         No new outputs; appends to eve_lines_event and fills in jedi_row
 
     Optional Outputs:
-        None
+        None.
 
     Example:
         loop_light_curve_fit(eve_lines_event, jedi_row, flare_index, uncertainty)
