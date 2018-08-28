@@ -120,17 +120,14 @@ def init_jedi_row():
         Example:
             jedi_row = init_jedi_row()
     """
-    jedi_row = pd.DataFrame(
-        OrderedDict((
-            ('Event #', pd.Series(np.arange(n_events))),
-            ('GOES Flare Start Time', ''),
-            ('GOES Flare Peak Time', ''),
-            ('GOES Flare Class', ''),
-            ('Pre-Flare Start Time', ''),
-            ('Pre-Flare End Time', ''),
-            ('Flare Interrupt', np.nan)
-        ))
-    )
+    jedi_row = pd.DataFrame([OrderedDict([
+                             ('Event #', np.nan),
+                             ('GOES Flare Start Time', np.nan),
+                             ('GOES Flare Peak Time', np.nan),
+                             ('GOES Flare Class', np.nan),
+                             ('Pre-Flare Start Time', np.nan),
+                             ('Pre-Flare End Time', np.nan),
+                             ('Flare Interrupt', np.nan)])])
 
     # Define the combination of columns of the JEDI catalog
     ion_tuples = list(itertools.permutations(eve_lines.columns.values, 2))

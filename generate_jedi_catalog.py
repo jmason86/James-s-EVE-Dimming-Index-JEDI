@@ -130,18 +130,16 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
         jedi_config.logger.info('Running on event {0}'.format(flare_index))
 
         # Reset jedi_row
-        print('Resetting')
         jedi_row[:] = np.nan
-        print('Time to reset the jedi row with nan [s]: {0}'.format(time.time() - loop_time))
 
         # Reset the flare interrupt flag
         flare_interrupt = False
 
         # Fill the GOES flare information into the JEDI row
         jedi_row['Event #'] = flare_index
-        jedi_row['GOES Flare Start Time'] = goes_flare_events['start_time'][flare_index].iso
-        jedi_row['GOES Flare Peak Time'] = goes_flare_events['peak_time'][flare_index].iso
-        jedi_row['GOES Flare Class'] = goes_flare_events['class'][flare_index]
+        jedi_row['GOES Flare Start Time'] = jedi_config.goes_flare_events['start_time'][flare_index].iso
+        jedi_row['GOES Flare Peak Time'] = jedi_config.goes_flare_events['peak_time'][flare_index].iso
+        jedi_row['GOES Flare Class'] = jedi_config.goes_flare_events['class'][flare_index]
         if verbose:
             jedi_config.logger.info("Event {0} GOES flare details stored to JEDI row.".format(flare_index))
 
@@ -152,22 +150,22 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
             jedi_row["Pre-Flare Start Time"] = preflare_df['Pre-Flare Start Time'].iloc[map_flare_index_to_preflare_index(flare_index)]
             jedi_row["Pre-Flare End Time"] = preflare_df['Pre-Flare End Time'].iloc[map_flare_index_to_preflare_index(flare_index)]
             preflare_irradiance_cols = [col for col in jedi_row.columns if 'Pre-Flare Irradiance' in col]
-            jedi_row[preflare_irradiance_cols] = preflare_df['preflare_irradiance'].iloc[map_flare_index_to_preflare_index(flare_index)]  # TODO: Is n_element preflare_irradiance handled right here?
+            jedi_row[preflare_irradiance_cols] = preflare_df[preflare_irradiance_cols].iloc[map_flare_index_to_preflare_index(flare_index)].values
 
             if verbose:
                 jedi_config.logger.info("Event {0} pre-flare determination complete.".format(flare_index))
 
             # Clip EVE data to dimming window
-            bracket_time_left = (goes_flare_events['peak_time'][flare_index] + (dimming_window_relative_to_flare_minutes_left * u.minute))
-            next_flare_time = Time((goes_flare_events['peak_time'][flare_index + 1]).iso)
-            user_choice_time = (goes_flare_events['peak_time'][flare_index] + (dimming_window_relative_to_flare_minutes_right * u.minute))
+            bracket_time_left = (jedi_config.goes_flare_events['peak_time'][flare_index] + (dimming_window_relative_to_flare_minutes_left * u.minute))
+            next_flare_time = Time((jedi_config.goes_flare_events['peak_time'][flare_index + 1]).iso)
+            user_choice_time = (jedi_config.goes_flare_events['peak_time'][flare_index] + (dimming_window_relative_to_flare_minutes_right * u.minute))
             bracket_time_right = min(next_flare_time, user_choice_time)
 
             # If flare is shortening the window, set the flare_interrupt flag
             if bracket_time_right == next_flare_time:
                 flare_interrupt = True
                 if verbose:
-                    jedi_config.logger.info('Flare interrupt for event at {0} by flare at {1}'.format(goes_flare_events['peak_time'][flare_index].iso, next_flare_time))
+                    jedi_config.logger.info('Flare interrupt for event at {0} by flare at {1}'.format(jedi_config.goes_flare_events['peak_time'][flare_index].iso, next_flare_time))
 
             # Write flare_interrupt to JEDI row
             jedi_row['Flare Interrupt'] = flare_interrupt
@@ -180,7 +178,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
                 # Log message
                 if verbose:
                     jedi_config.logger.info('The dimming window duration of {0} minutes is shorter than the minimum threshold of {1} minutes. Skipping this event ({2})'
-                                .format(((bracket_time_right - bracket_time_left).sec / 60.0), threshold_minimum_dimming_window_minutes, goes_flare_events['peak_time'][flare_index]))
+                                .format(((bracket_time_right - bracket_time_left).sec / 60.0), threshold_minimum_dimming_window_minutes, jedi_config.goes_flare_events['peak_time'][flare_index]))
 
                 # Skip the rest of the processing in the flare_index loop
                 continue
@@ -216,7 +214,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
                 else:
                     light_curve_corrected, seconds_shift, scale_factor = light_curve_peak_match_subtract(light_curve_to_subtract_from_df,
                                                                                                          light_curve_to_subtract_with_df,
-                                                                                                         pd.Timestamp((goes_flare_events['peak_time'][flare_index]).iso),
+                                                                                                         pd.Timestamp((jedi_config.goes_flare_events['peak_time'][flare_index]).iso),
                                                                                                          plot_path_filename=output_path + 'Peak Subtractions/Event {0} {1}.png'.format(flare_index, ion_permutations[i]),
                                                                                                          verbose=verbose)
 
@@ -317,7 +315,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
                 if not os.path.exists(slope_path):
                     os.makedirs(slope_path)
 
-                slope_start_time = pd.Timestamp((goes_flare_events['peak_time'][flare_index]).iso)
+                slope_start_time = pd.Timestamp((jedi_config.goes_flare_events['peak_time'][flare_index]).iso)
                 slope_end_time = depth_time
 
                 if (pd.isnull(slope_start_time)) or (pd.isnull(slope_end_time)):
@@ -439,7 +437,7 @@ def map_flare_index_to_preflare_index(flare_index):
         None
 
     Outputs:
-        preflare_map_indices [numpy array]: Map of each flare_index to which preflare irradiance index to use.
+        preflare_index [np.int64]: The index in the pre-flare irradiance array to use for the given flare_index.
 
     Optional Outputs:
         None
@@ -448,12 +446,12 @@ def map_flare_index_to_preflare_index(flare_index):
         preflare_index = map_flare_index_to_preflare_index(flare_index)
     """
     is_independent_flare = jedi_config.all_minutes_since_last_flare > jedi_config.threshold_time_prior_flare_minutes
-    irange = range(is_independent_flare)
+    irange = range(0, is_independent_flare.size)
     invalid_index = -1
     idx = np.where(is_independent_flare)[0]
     sidx = np.searchsorted(idx, irange, 'right')-1
     preflare_map_indices = np.where(sidx == -1, invalid_index, idx[sidx])
-    return preflare_map_indices[flare_index]
+    return preflare_map_indices[flare_index - 1]
 
 def clip_eve_data_to_dimming_window(flare_index,
                                     verbose=False):
