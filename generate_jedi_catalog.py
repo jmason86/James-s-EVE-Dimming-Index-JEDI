@@ -192,133 +192,15 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
                 jedi_config.logger.info('Loading files {0} and {1} rather than processing again.'.format(processed_jedi_non_params_filename, processed_lines_filename))
 
         # Parameterize the light curves for dimming
-        for column in eve_lines_event:
+        determine_dimming_parameters(eve_lines_event, flare_index)
 
-            # Null out all parameters
-            depth_percent, depth_time = np.nan, np.nan
-            slope_start_time, slope_end_time = np.nan, np.nan
-            slope_min, slope_max, slope_mean = np.nan, np.nan, np.nan
-            duration_seconds, duration_start_time, duration_end_time = np.nan, np.nan, np.nan
-
-            # Determine whether to do the parameterizations or not
-            if eve_lines_event[column].isnull().all().all():
-                if jedi_config.verbose:
-                    jedi_config.logger.info('Event {0} {1} parameterization skipped because all irradiances are NaN.'.format(flare_index, column))
-            else:
-                eve_line_event = pd.DataFrame(eve_lines_event[column])
-                eve_line_event.columns = ['irradiance']
-
-                # Determine dimming depth (if any)
-                depth_path = output_path + 'Depth/'
-                if not os.path.exists(depth_path):
-                    os.makedirs(depth_path)
-
-                plt.close('all')
-                depth_percent, depth_time = determine_dimming_depth(eve_line_event,
-                                                                    plot_path_filename='{0}Event {1} {2} Depth.png'.format(depth_path, flare_index, column))
-
-                jedi_row[column + ' Depth [%]'] = depth_percent
-                # jedi_row[column + ' Depth Uncertainty [%]'] = depth_uncertainty  # TODO: make determine_dimming_depth return the propagated uncertainty
-                jedi_row[column + ' Depth Time'] = depth_time
-
-                # Determine dimming slope (if any)
-                slope_path = output_path + 'Slope/'
-                if not os.path.exists(slope_path):
-                    os.makedirs(slope_path)
-
-                slope_start_time = pd.Timestamp((jedi_config.goes_flare_events['peak_time'][flare_index]).iso)
-                slope_end_time = depth_time
-
-                if (pd.isnull(slope_start_time)) or (pd.isnull(slope_end_time)):
-                    if jedi_config.verbose:
-                        jedi_config.logger.warning('Cannot compute slope or duration because slope bounding times NaN.')
-                else:
-                    plt.close('all')
-                    slope_min, slope_max, slope_mean = determine_dimming_slope(eve_line_event,
-                                                                               earliest_allowed_time=slope_start_time,
-                                                                               latest_allowed_time=slope_end_time,
-                                                                               plot_path_filename='{0}Event {1} {2} Slope.png'.format(slope_path, flare_index, column))
-
-                    jedi_row[column + ' Slope Min [%/s]'] = slope_min
-                    jedi_row[column + ' Slope Max [%/s]'] = slope_max
-                    jedi_row[column + ' Slope Mean [%/s]'] = slope_mean
-                    # jedi_row[column + ' Slope Uncertainty [%]'] = slope_uncertainty  # TODO: make determine_dimming_depth return the propagated uncertainty
-                    jedi_row[column + ' Slope Start Time'] = slope_start_time
-                    jedi_row[column + ' Slope End Time'] = slope_end_time
-
-                    # Determine dimming duration (if any)
-                    duration_path = output_path + 'Duration/'
-                    if not os.path.exists(duration_path):
-                        os.makedirs(duration_path)
-
-                    plt.close('all')
-                    duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(eve_line_event,
-                                                                                                          earliest_allowed_time=slope_start_time,
-                                                                                                          plot_path_filename='{0}Event {1} {2} Duration.png'.format(duration_path, flare_index, column))
-
-                    jedi_row[column + ' Duration [s]'] = duration_seconds
-                    jedi_row[column + ' Duration Start Time'] = duration_start_time
-                    jedi_row[column + ' Duration End Time'] = duration_end_time
-
-                if jedi_config.verbose:
-                    jedi_config.logger.info("Event {0} {1} parameterizations complete.".format(flare_index, column))
-
-                # Produce a summary plot for each light curve
-                plt.style.use('jpm-transparent-light')
-
-                ax = eve_line_event['irradiance'].plot(color='black')
-                plt.axhline(linestyle='dashed', color='grey')
-                start_date = eve_line_event.index.values[0]
-                start_date_string = pd.to_datetime(str(start_date))
-                plt.xlabel(start_date_string.strftime('%Y-%m-%d %H:%M:%S'))
-                plt.ylabel('Irradiance [%]')
-                fmtr = dates.DateFormatter("%H:%M:%S")
-                ax.xaxis.set_major_formatter(fmtr)
-                ax.xaxis.set_major_locator(dates.HourLocator())
-                plt.title('Event {0} {1} nm Parameters'.format(flare_index, column))
-
-                if not np.isnan(depth_percent):
-                    plt.annotate('', xy=(depth_time, -depth_percent), xycoords='data',
-                                 xytext=(depth_time, 0), textcoords='data',
-                                 arrowprops=dict(facecolor='limegreen', edgecolor='limegreen', linewidth=2))
-                    mid_depth = -depth_percent / 2.0
-                    plt.annotate('{0:.2f} %'.format(depth_percent), xy=(depth_time, mid_depth), xycoords='data',
-                                 ha='right', va='center', rotation=90, size=18, color='limegreen')
-
-                if not np.isnan(slope_mean):
-                    p = plt.plot(eve_line_event[slope_start_time:slope_end_time]['irradiance'], c='tomato')
-
-                    inverse_str = '$^{-1}$'
-                    plt.annotate('slope_min={0} % s{1}'.format(latex_float(slope_min), inverse_str),
-                                 xy=(0.98, 0.12), xycoords='axes fraction', ha='right',
-                                 size=12, color=p[0].get_color())
-                    plt.annotate('slope_max={0} % s{1}'.format(latex_float(slope_max), inverse_str),
-                                 xy=(0.98, 0.08), xycoords='axes fraction', ha='right',
-                                 size=12, color=p[0].get_color())
-                    plt.annotate('slope_mean={0} % s{1}'.format(latex_float(slope_mean), inverse_str),
-                                 xy=(0.98, 0.04), xycoords='axes fraction', ha='right',
-                                 size=12, color=p[0].get_color())
-
-                if not np.isnan(duration_seconds):
-                    plt.annotate('', xy=(duration_start_time, 0), xycoords='data',
-                                 xytext=(duration_end_time, 0), textcoords='data',
-                                 arrowprops=dict(facecolor='dodgerblue', edgecolor='dodgerblue', linewidth=5, arrowstyle='<->'))
-                    mid_time = duration_start_time + (duration_end_time - duration_start_time) / 2
-                    plt.annotate(str(duration_seconds) + ' s', xy=(mid_time, 0), xycoords='data', ha='center', va='bottom', size=18, color='dodgerblue')
-
-                summary_path = output_path + 'Summary Plots/'
-                if not os.path.exists(summary_path):
-                    os.makedirs(summary_path)
-                summary_filename = '{0}Event {1} {2} Parameter Summary.png'.format(summary_path, flare_index, column)
-                plt.savefig(summary_filename)
-                plt.close('all')
-                if jedi_config.verbose:
-                    jedi_config.logger.info("Summary plot saved to %s" % summary_filename)
+        # Produce a summary plot for each light curve
+        produce_summary_plot(eve_lines_event, flare_index)
 
         # Write to the JEDI catalog on disk
-        jedi_row.to_csv(csv_filename, header=False, index=False, mode='a')
+        jedi_row.to_csv(jedi_config.jedi_csv_filename, header=False, index=False, mode='a')
         if jedi_config.verbose:
-            jedi_config.logger.info('Event {0} JEDI row written to {1}.'.format(flare_index, csv_filename))
+            jedi_config.logger.info('Event {0} JEDI row written to {1}.'.format(flare_index, jedi_config.jedi_csv_filename))
 
         # Update progress bar
         #progress_bar.update(flare_index)
@@ -398,7 +280,7 @@ def clip_eve_data_to_dimming_window(flare_index):
             jedi_config.logger.info('Flare interrupt for event at {0} by flare at {1}'.format(jedi_config.goes_flare_events['peak_time'][flare_index].iso, next_flare_time))
 
     # Write flare_interrupt to JEDI row
-    jedi_row.at[flare_index, 'Flare Interrupt'] = flare_interrupt
+    jedi_row['Flare Interrupt'] = flare_interrupt
 
     if ((bracket_time_right - bracket_time_left).sec / 60.0) < jedi_config.threshold_minimum_dimming_window_minutes:
         # Leave all dimming parameters as NaN and write this null result to the CSV on disk
@@ -520,12 +402,11 @@ def loop_light_curve_fit(eve_lines_event, flare_index, uncertainty):
                 jedi_config.logger.info('Event {0} {1} light curves fitted.'.format(flare_index, column))
 
 
-def determine_dimming_parameters(eve_lines_event, jedi_row, flare_index):
+def determine_dimming_parameters(eve_lines_event, flare_index):
     """For every light curve, determine the dimming parameters (depth, slope, duration) wherever possible
 
     Inputs:
         eve_lines_event [pandas DataFrame]: The (39) EVE extracted emission lines (columns) trimmed in time (rows).
-        jedi_row [pandas DataFrame]:        A ~24k column DataFrame with only a single row.
         flare_index [int]:                  The identifier for which event in JEDI to process.
 
     Optional Inputs:
@@ -538,7 +419,7 @@ def determine_dimming_parameters(eve_lines_event, jedi_row, flare_index):
         None.
 
     Example:
-        determine_dimming_parameters(eve_lines_event, jedi_row, flare_index)
+        determine_dimming_parameters(eve_lines_event, flare_index)
     """
     if jedi_config.verbose:
         jedi_config.logger.info("Fitting light curves for event {0}.".format(flare_index))
@@ -617,12 +498,11 @@ def determine_dimming_parameters(eve_lines_event, jedi_row, flare_index):
                 jedi_config.logger.info("Event {0} {1} parameterizations complete.".format(flare_index, column))
 
 
-def produce_summary_plot(eve_lines_event, jedi_row, flare_index):
+def produce_summary_plot(eve_lines_event, flare_index):
     """Make a plot of the fitted light curve, annotated with every dimming parameter that could be determined
 
     Inputs:
         eve_lines_event [pandas DataFrame]: The (39) EVE extracted emission lines (columns) trimmed in time (rows).
-        jedi_row [pandas DataFrame]:        A ~24k column DataFrame with only a single row.
         flare_index [int]:                  The identifier for which event in JEDI to process.
 
     Optional Inputs:
@@ -635,16 +515,30 @@ def produce_summary_plot(eve_lines_event, jedi_row, flare_index):
         None.
 
     Example:
-        produce_summary_plot(eve_lines_event, jedi_row, flare_index)
+        produce_summary_plot(eve_lines_event, flare_index)
     """
     if jedi_config.verbose:
         jedi_config.logger.info("Fitting light curves for event {0}.".format(flare_index))
 
     # Produce a summary plot for each light curve
-    # plt.style.use('jpm-transparent-light')
     for column in eve_lines_event:
+        if eve_lines_event[column].isnull().all().all():
+            continue
+
         eve_line_event = pd.DataFrame(eve_lines_event[column])
         eve_line_event.columns = ['irradiance']
+
+        # Extract the parameters to simplify multiple calls below
+        depth_percent = jedi_row[column + ' Depth [%]'].values[0]
+        depth_time = jedi_row[column + ' Depth Time'].values[0]
+        slope_min = jedi_row[column + ' Slope Min [%/s]'].values[0]
+        slope_max = jedi_row[column + ' Slope Max [%/s]'].values[0]
+        slope_mean = jedi_row[column + ' Slope Mean [%/s]'].values[0]
+        slope_start_time = jedi_row[column + ' Slope Start Time'].values[0]
+        slope_end_time = jedi_row[column + ' Slope End Time'].values[0]
+        duration_seconds = jedi_row[column + ' Duration [s]'].values[0]
+        duration_start_time = jedi_row[column + ' Duration Start Time'].values[0]
+        duration_end_time = jedi_row[column + ' Duration End Time'].values[0]
 
         ax = eve_line_event['irradiance'].plot(color='black')
         plt.axhline(linestyle='dashed', color='grey')
@@ -657,35 +551,35 @@ def produce_summary_plot(eve_lines_event, jedi_row, flare_index):
         ax.xaxis.set_major_locator(dates.HourLocator())
         plt.title('Event {0} {1} nm Parameters'.format(flare_index, column))
 
-        if not np.isnan(jedi_row[column + ' Depth [%]']):
-            plt.annotate('', xy=(jedi_row[column + ' Depth Time'], -jedi_row[column + ' Depth [%]']), xycoords='data',
-                         xytext=(jedi_row[column + ' Depth Time'], 0), textcoords='data',
+        if not np.isnan(depth_percent):
+            plt.annotate('', xy=(depth_time, -depth_percent), xycoords='data',
+                         xytext=(depth_time, 0), textcoords='data',
                          arrowprops=dict(facecolor='limegreen', edgecolor='limegreen', linewidth=2))
-            mid_depth = -jedi_row[column + ' Depth [%]'] / 2.0
-            plt.annotate('{0:.2f} %'.format(jedi_row[column + ' Depth [%]']), xy=(jedi_row[column + ' Depth Time'], mid_depth), xycoords='data',
+            mid_depth = -depth_percent / 2.0
+            plt.annotate('{0:.2f} %'.format(depth_percent), xy=(depth_time, mid_depth), xycoords='data',
                          ha='right', va='center', rotation=90, size=18, color='limegreen')
 
-        if not np.isnan(jedi_row[column + ' Slope Mean [%/s]']):
-            p = plt.plot(eve_line_event[jedi_row[column + ' Slope Start Time']:jedi_row[column + ' Slope End Time']]['irradiance'], c='tomato')
+        if not np.isnan(slope_mean):
+            p = plt.plot(eve_line_event[slope_start_time:slope_end_time]['irradiance'], c='tomato')
 
             inverse_str = '$^{-1}$'
-            plt.annotate('slope_min={0} % s{1}'.format(latex_float(jedi_row[column + ' Slope Min [%/s]']), inverse_str),
+            plt.annotate('slope_min={0} % s{1}'.format(latex_float(slope_min), inverse_str),
                          xy=(0.98, 0.12), xycoords='axes fraction', ha='right',
                          size=12, color=p[0].get_color())
-            plt.annotate('slope_max={0} % s{1}'.format(latex_float(jedi_row[column + ' Slope Max [%/s]']), inverse_str),
+            plt.annotate('slope_max={0} % s{1}'.format(latex_float(slope_max), inverse_str),
                          xy=(0.98, 0.08), xycoords='axes fraction', ha='right',
                          size=12, color=p[0].get_color())
-            plt.annotate('slope_mean={0} % s{1}'.format(latex_float(jedi_row[column + ' Slope Mean [%/s]']), inverse_str),
+            plt.annotate('slope_mean={0} % s{1}'.format(latex_float(slope_mean), inverse_str),
                          xy=(0.98, 0.04), xycoords='axes fraction', ha='right',
                          size=12, color=p[0].get_color())
 
-        if not np.isnan(jedi_row[column + ' Duration [s]']):
-            plt.annotate('', xy=(jedi_row[column + ' Duration Start Time'], 0), xycoords='data',
-                         xytext=(jedi_row[column + ' Duration End Time'], 0), textcoords='data',
+        if not np.isnan(duration_seconds):
+            plt.annotate('', xy=(duration_start_time, 0), xycoords='data',
+                         xytext=(duration_end_time, 0), textcoords='data',
                          arrowprops=dict(facecolor='dodgerblue', edgecolor='dodgerblue', linewidth=5,
                                          arrowstyle='<->'))
-            mid_time = jedi_row[column + ' Duration Start Time'] + (jedi_row[column + ' Duration End Time'] - jedi_row[column + ' Duration Start Time']) / 2
-            plt.annotate(str(jedi_row[column + ' Duration [s]']) + ' s', xy=(mid_time, 0), xycoords='data', ha='center', va='bottom',
+            mid_time = duration_start_time + (duration_end_time - duration_start_time) / 2
+            plt.annotate(str(duration_seconds) + ' s', xy=(mid_time, 0), xycoords='data', ha='center', va='bottom',
                          size=18, color='dodgerblue')
 
         summary_path = jedi_config.output_path + 'Summary Plots/'
