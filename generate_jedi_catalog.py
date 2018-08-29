@@ -610,6 +610,7 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
         None.
 
     Example:
+
         generate_jedi_catalog(output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/')
     """
     # Create one sorted, clean dataframe from all of the csv files
