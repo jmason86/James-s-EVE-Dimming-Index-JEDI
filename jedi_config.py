@@ -44,8 +44,6 @@ def init():
 
         Outputs:
             All outputs are globals accessible by doing import jedi_config
-            eve_lines [pandas DataFrame]:                     SDO/EVE level 2 lines data. Stores irradiance, time, and wavelength.
-            goes_flare_events[pandas DataFrame]:              Flares as observed by GOES/XRS. Store class, start and peak time
             logger [JpmLogger]:                               A configurable log that can optionally also print to console.
             all_minutes_since_last_flare [numpy float array]: The amount of time between each flare.
             preflare_indices [numpy int array]:               The indices where flares are considered time-independent.
@@ -56,7 +54,7 @@ def init():
         Example:
             jedi_config.init()
     """
-    global eve_lines, goes_flare_events, logger, all_minutes_since_last_flare, preflare_indices
+    global logger, all_minutes_since_last_flare, preflare_indices
 
     # Initialize logger
     logger = JpmLogger(filename=logger_filename, path=output_path, console=False)
@@ -69,30 +67,10 @@ def init():
     init_filenames()
 
     # Load the EVE data
-    # TODO: Replace this shortcut method with the method I'm building into sunpy
-    logger.info('Loading EVE data.')
-    eve_readsav = readsav(eve_data_path)
-    irradiance = eve_readsav['irradiance'].byteswap().newbyteorder()  # pandas doesn't like big endian
-    irradiance[irradiance == -1] = np.nan
-    wavelengths = eve_readsav['wavelength']
-    wavelengths_str = []
-    [wavelengths_str.append('{0:1.1f}'.format(wavelength)) for wavelength in wavelengths]
-    eve_lines = pd.DataFrame(irradiance, columns=wavelengths_str)
-    eve_lines.index = pd.to_datetime(eve_readsav.iso.astype(str))
-    eve_lines.sort_index(inplace=True)
-    eve_lines = eve_lines.drop_duplicates()
+    load_eve_data()
 
     # Get GOES flare events above C1 within date range corresponding to EVE data
-    # flares = get_goes_flare_events(eve_lines.index[0], eve_lines.index[-1])  # TODO: The method in sunpy needs fixing, issue 2434
-
-    # Load GOES events from IDL saveset instead of directly through sunpy
-    logger.info('Loading GOES flare events.')
-    goes_flare_events = readsav(goes_data_path)
-    goes_flare_events['class'] = goes_flare_events['class'].astype(str)
-    goes_flare_events['event_peak_time_human'] = goes_flare_events['event_peak_time_human'].astype(str)
-    goes_flare_events['event_start_time_human'] = goes_flare_events['event_start_time_human'].astype(str)
-    goes_flare_events['peak_time'] = Time(goes_flare_events['event_peak_time_jd'], format='jd', scale='utc')
-    goes_flare_events['start_time'] = Time(goes_flare_events['event_start_time_jd'], format='jd', scale='utc')
+    load_goes_flare_event_data()
 
     # Compute the amount of time between all flares [minutes]
     peak_time = goes_flare_events['peak_time']
@@ -108,7 +86,7 @@ def init_folders():
     """Internal-use function to check if necessary folders exist; if not, create them
 
         Inputs:
-            None. Draws from the globals at the top of this file
+            None. Draws from the globals at the top of this file.
 
         Optional Inputs:
             None.
@@ -155,7 +133,7 @@ def init_filenames():
         These are variables that themselves depend on other globals being defined already but are fully determined at that point.
 
         Inputs:
-            None. Draws from the globals at the top of this file
+            None. Draws from the globals at the top of this file.
 
         Optional Inputs:
             None.
@@ -174,6 +152,74 @@ def init_filenames():
     global jedi_csv_filename, preflare_csv_filename
     jedi_csv_filename = output_path + 'jedi_{0}.csv'.format(Time.now().iso)
     preflare_csv_filename = os.path.join(output_path, 'Preflare Determination/Preflare Irradiances.csv')
+
+
+def load_eve_data():
+    """Internal-use function to load and clean the SDO/EVE data.
+
+        Inputs:
+            None. Draws from the globals at the top of this file.
+
+        Optional Inputs:
+            None.
+
+        Outputs:
+            No return. Updates global variables.
+            eve_lines [pandas DataFrame]: SDO/EVE level 2 lines data. Stores irradiance, time, and wavelength.
+
+        Optional Outputs:
+             None.
+
+        Example:
+            load_eve_data()
+    """
+    global eve_lines
+
+    # TODO: Replace this shortcut method with the method I'm building into sunpy
+    logger.info('Loading EVE data.')
+    eve_readsav = readsav(eve_data_path)
+    irradiance = eve_readsav['irradiance'].byteswap().newbyteorder()  # pandas doesn't like big endian
+    irradiance[irradiance == -1] = np.nan
+    wavelengths = eve_readsav['wavelength']
+    wavelengths_str = []
+    [wavelengths_str.append('{0:1.1f}'.format(wavelength)) for wavelength in wavelengths]
+    eve_lines = pd.DataFrame(irradiance, columns=wavelengths_str)
+    eve_lines.index = pd.to_datetime(eve_readsav.iso.astype(str))
+    eve_lines.sort_index(inplace=True)
+    eve_lines = eve_lines.drop_duplicates()
+
+
+def load_goes_flare_event_data():
+    """Internal-use function to load and clean the GOES/XRS flare event data from NOAA/SWPC.
+
+        Inputs:
+            None. Draws from the globals at the top of this file.
+
+        Optional Inputs:
+            None.
+
+        Outputs:
+            No return. Updates global variables.
+            goes_flare_events[pandas DataFrame]: Flares as observed by GOES/XRS. Store class, start and peak time
+
+        Optional Outputs:
+             None.
+
+        Example:
+            load_eve_data()
+    """
+    global goes_flare_events
+
+    # flares = get_goes_flare_events(eve_lines.index[0], eve_lines.index[-1])  # TODO: The method in sunpy needs fixing, issue 2434
+
+    # Load GOES events from IDL saveset instead of directly through sunpy
+    logger.info('Loading GOES flare events.')
+    goes_flare_events = readsav(goes_data_path)
+    goes_flare_events['class'] = goes_flare_events['class'].astype(str)
+    goes_flare_events['event_peak_time_human'] = goes_flare_events['event_peak_time_human'].astype(str)
+    goes_flare_events['event_start_time_human'] = goes_flare_events['event_start_time_human'].astype(str)
+    goes_flare_events['peak_time'] = Time(goes_flare_events['event_peak_time_jd'], format='jd', scale='utc')
+    goes_flare_events['start_time'] = Time(goes_flare_events['event_start_time_jd'], format='jd', scale='utc')
 
 
 def init_jedi_row():
@@ -201,7 +247,10 @@ def init_jedi_row():
                              ('GOES Flare Class', np.nan),
                              ('Pre-Flare Start Time', np.nan),
                              ('Pre-Flare End Time', np.nan),
-                             ('Flare Interrupt', np.nan)])])
+                             ('Flare Interrupt', np.nan),
+                             ('Flare Latitude [deg]', np.nan),
+                             ('Flare Longitude [deg]', np.nan),
+                             ('Flare Position Angle [deg]', np.nan)])])
 
     # Define the combination of columns of the JEDI catalog
     global ion_tuples, ion_permutations

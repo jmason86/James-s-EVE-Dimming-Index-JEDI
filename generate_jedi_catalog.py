@@ -18,7 +18,7 @@ from functools import partial
 
 # Custom modules
 from jpm_number_printing import latex_float
-# from get_goes_flare_events import get_goes_flare_events  # TODO: Uncomment once sunpy method implemented
+from lat_lon_to_position_angle import lat_lon_to_position_angle
 from determine_preflare_irradiance import multiprocess_preflare_irradiance
 from light_curve_peak_match_subtract import light_curve_peak_match_subtract
 from light_curve_fit import light_curve_fit
@@ -61,7 +61,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
     if isinstance(flare_index_range, int):
         flare_index_range = np.array([flare_index_range])
 
-    # Load data
+    # Set up folders, load and clean data
     jedi_config.init()
 
     # Define the columns of the JEDI catalog
@@ -108,14 +108,14 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
         # Reset jedi_row
         jedi_row[:] = np.nan
 
-        # Reset the flare interrupt flag
-        flare_interrupt = False
-
         # Fill the GOES flare information into the JEDI row
         jedi_row['Event #'] = flare_index
         jedi_row['GOES Flare Start Time'] = jedi_config.goes_flare_events['start_time'][flare_index].iso
         jedi_row['GOES Flare Peak Time'] = jedi_config.goes_flare_events['peak_time'][flare_index].iso
         jedi_row['GOES Flare Class'] = jedi_config.goes_flare_events['class'][flare_index]
+        jedi_row['Flare Latitude [deg]'] = jedi_config.goes_flare_events.latitude[flare_index][0]
+        jedi_row['Flare Longitude [deg]'] = jedi_config.goes_flare_events.longitude[flare_index][0]
+        jedi_row['Flare Position Angle [deg]'] = lat_lon_to_position_angle(jedi_row['Flare Latitude [deg]'].values[0], jedi_row['Flare Longitude [deg]'].values[0])
         if jedi_config.verbose:
             jedi_config.logger.info("Event {0} GOES flare details stored to JEDI row.".format(flare_index))
 
