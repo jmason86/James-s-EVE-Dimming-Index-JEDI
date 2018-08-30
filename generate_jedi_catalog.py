@@ -37,12 +37,7 @@ __contact__ = 'jmason86@gmail.com'
 
 
 def generate_jedi_catalog(flare_index_range=range(0, 5052),
-                          compute_new_preflare_irradiances=False,
-                          threshold_time_prior_flare_minutes=480.0,
-                          dimming_window_relative_to_flare_minutes_left=-1.0,
-                          dimming_window_relative_to_flare_minutes_right=1440.0,
-                          threshold_minimum_dimming_window_minutes=120.0,
-                          output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'):
+                          compute_new_preflare_irradiances=False):
     """Wrapper code for creating James's Extreme Ultraviolet Variability Experiment (EVE) Dimming Index (JEDI) catalog.
 
     Inputs:
@@ -50,35 +45,16 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
 
     Optional Inputs:
         compute_new_preflare_irradiances [bool]:                Set to force reprocessing of pre-flare irradiances. Will also occur if preflare file doesn't exist on disk.
-        threshold_time_prior_flare_minutes [float]:             How long before a particular event does the last one need to have
-                                                                occurred to be considered independent. If the previous one was too
-                                                                recent, will use that event's pre-flare irradiance.
-                                                                The mean dimming time of 100 dimming events in
-                                                                Reinard and Biesecker (2008, 2009) is the default.
-                                                                Default is 480 (8 hours).
-        dimming_window_relative_to_flare_minutes_left [float]:  Defines the left side of the time window to search for dimming
-                                                                relative to the GOES/XRS flare peak. Negative numbers mean
-                                                                minutes prior to the flare peak. Default is 0.
-        dimming_window_relative_to_flare_minutes_right [float]: Defines the right side of the time window to search for dimming
-                                                                relative to the GOES/XRS flare peak. If another flare
-                                                                occurs before this, that time will define the end of the
-                                                                window instead. The time that "most" of the 100 dimming events had recovered
-                                                                by in Reinard and Biesecker (2008, 2009) is the default.
-                                                                Default is 1440 (24 hours).
-        threshold_minimum_dimming_window_minutes [float]:       The smallest allowed time window in which to search for dimming.
-                                                                Default is 120 (2 hours).
-        output_path [str]:                                      Set to a path for saving the JEDI catalog table and processing
-                                                                summary plots. Default is '/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
 
     Outputs:
         No direct return, but writes a csv to disk with the dimming paramerization results.
-        Subroutines also optionally save processing plots to disk in output_path.
+        Subroutines also optionally save processing plots to disk in jedi_config.output_path.
 
     Optional Outputs:
         None
 
     Example:
-        generate_jedi_catalog(output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/')
+        generate_jedi_catalog()
     """
 
     # Force flare_index_range to be an array type so it can be indexed in later code
@@ -144,8 +120,8 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
             jedi_config.logger.info("Event {0} GOES flare details stored to JEDI row.".format(flare_index))
 
         # Only do pre-parameterization processing if it hasn't been done already (check if files exist on disk)
-        processed_jedi_non_params_filename = output_path + 'Processed Pre-Parameterization Data/Event {0} Pre-Parameterization.h5'.format(flare_index)
-        processed_lines_filename = output_path + 'Processed Lines Data/Event {0} Lines.h5'.format(flare_index)
+        processed_jedi_non_params_filename = jedi_config.output_path + 'Processed Pre-Parameterization Data/Event {0} Pre-Parameterization.h5'.format(flare_index)
+        processed_lines_filename = jedi_config.output_path + 'Processed Lines Data/Event {0} Lines.h5'.format(flare_index)
         if not os.path.isfile(processed_lines_filename) or not os.path.isfile(processed_jedi_non_params_filename):
             jedi_row["Pre-Flare Start Time"] = preflare_df['Pre-Flare Start Time'].iloc[map_flare_index_to_preflare_index(flare_index)]
             jedi_row["Pre-Flare End Time"] = preflare_df['Pre-Flare End Time'].iloc[map_flare_index_to_preflare_index(flare_index)]
@@ -610,8 +586,7 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
         None.
 
     Example:
-
-        generate_jedi_catalog(output_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/')
+        merge_jedi_catalog_files()
     """
     # Create one sorted, clean dataframe from all of the csv files
     list_dfs = []
