@@ -47,8 +47,6 @@ def init():
             eve_lines [pandas DataFrame]:                     SDO/EVE level 2 lines data. Stores irradiance, time, and wavelength.
             goes_flare_events[pandas DataFrame]:              Flares as observed by GOES/XRS. Store class, start and peak time
             logger [JpmLogger]:                               A configurable log that can optionally also print to console.
-            jedi_csv_filename [str]:                          The unique path/filename for the jedi catalog in this run to be stored in on disk.
-            preflare_csv_filename [str]:                      The path/filename of the computed pre-flare irradiances.
             all_minutes_since_last_flare [numpy float array]: The amount of time between each flare.
             preflare_indices [numpy int array]:               The indices where flares are considered time-independent.
 
@@ -58,15 +56,17 @@ def init():
         Example:
             jedi_config.init()
     """
-    global eve_lines, goes_flare_events, logger, jedi_csv_filename, preflare_csv_filename, all_minutes_since_last_flare, preflare_indices
+    global eve_lines, goes_flare_events, logger, all_minutes_since_last_flare, preflare_indices
 
     # Initialize logger
     logger = JpmLogger(filename=logger_filename, path=output_path, console=False)
     logger.info('Logger initialized.')
 
+    # Set up folders
+    init_folders()
+
     # Set up filenames
-    jedi_csv_filename = output_path + 'jedi_{0}.csv'.format(Time.now().iso)
-    preflare_csv_filename = os.path.join(output_path, 'Preflare Determination/Preflare Irradiances.csv')
+    init_filenames()
 
     # Load the EVE data
     # TODO: Replace this shortcut method with the method I'm building into sunpy
@@ -102,6 +102,78 @@ def init():
     is_flare_independent = all_minutes_since_last_flare > threshold_time_prior_flare_minutes
     preflare_indices = np.where(is_flare_independent)[0] + 1  # Add 1 to map back to event index and not to the differentiated vector
     logger.info('Found {0} independent flares of {1} total flares given a time separation of {2} minutes.'.format(len(preflare_indices), len(is_flare_independent), threshold_time_prior_flare_minutes))
+
+
+def init_folders():
+    """Internal-use function to check if necessary folders exist; if not, create them
+
+        Inputs:
+            None. Draws from the globals at the top of this file
+
+        Optional Inputs:
+            None.
+
+        Outputs:
+            No return. Creates folders on disk.
+
+        Optional Outputs:
+             None.
+
+        Example:
+            init_folders()
+    """
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
+    if not os.path.exists(output_path + 'Processed Pre-Parameterization Data'):
+        os.makedirs(output_path + 'Processed Pre-Parameterization Data')
+
+    if not os.path.exists(output_path + 'Processed Lines Data'):
+        os.makedirs(output_path + 'Processed Lines Data')
+
+    if not os.path.exists(output_path + 'Peak Subtractions'):
+        os.makedirs(output_path + 'Peak Subtractions')
+
+    if not os.path.exists(output_path + 'Fitting'):
+        os.makedirs(output_path + 'Fitting')
+
+    if not os.path.exists(output_path + 'Depth'):
+        os.makedirs(output_path + 'Depth')
+
+    if not os.path.exists(output_path + 'Slope'):
+        os.makedirs(output_path + 'Slope')
+
+    if not os.path.exists(output_path + 'Duration'):
+        os.makedirs(output_path + 'Duration')
+
+    if not os.path.exists(output_path + 'Summary Plots'):
+        os.makedirs(output_path + 'Summary Plots')
+
+
+def init_filenames():
+    """Internal-use function to set filename globals
+        These are variables that themselves depend on other globals being defined already but are fully determined at that point.
+
+        Inputs:
+            None. Draws from the globals at the top of this file
+
+        Optional Inputs:
+            None.
+
+        Outputs:
+            No return. Updates global variables.
+            jedi_csv_filename [str]:     The unique path/filename for the jedi catalog in this run to be stored in on disk.
+            preflare_csv_filename [str]: The path/filename of the computed pre-flare irradiances.
+
+        Optional Outputs:
+             None.
+
+        Example:
+            init_filenames()
+    """
+    global jedi_csv_filename, preflare_csv_filename
+    jedi_csv_filename = output_path + 'jedi_{0}.csv'.format(Time.now().iso)
+    preflare_csv_filename = os.path.join(output_path, 'Preflare Determination/Preflare Irradiances.csv')
 
 
 def init_jedi_row():

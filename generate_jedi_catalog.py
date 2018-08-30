@@ -363,8 +363,6 @@ def loop_light_curve_fit(eve_lines_event, flare_index, uncertainty):
             eve_line_event['uncertainty'] = uncertainty
 
             fitting_path = jedi_config.output_path + 'Fitting/'
-            if not os.path.exists(fitting_path):
-                os.makedirs(fitting_path)
 
             plt.close('all')
             light_curve_fit_df, best_fit_gamma, best_fit_score = light_curve_fit(eve_line_event,
@@ -420,8 +418,6 @@ def determine_dimming_parameters(eve_lines_event, flare_index):
 
             # Determine dimming depth (if any)
             depth_path = jedi_config.output_path + 'Depth/'
-            if not os.path.exists(depth_path):
-                os.makedirs(depth_path)
 
             plt.close('all')
             depth_percent, depth_time = determine_dimming_depth(eve_line_event,
@@ -433,8 +429,6 @@ def determine_dimming_parameters(eve_lines_event, flare_index):
 
             # Determine dimming slope (if any)
             slope_path = jedi_config.output_path + 'Slope/'
-            if not os.path.exists(slope_path):
-                os.makedirs(slope_path)
 
             slope_start_time = pd.Timestamp((jedi_config.goes_flare_events['peak_time'][flare_index]).iso)
             slope_end_time = depth_time
@@ -458,8 +452,6 @@ def determine_dimming_parameters(eve_lines_event, flare_index):
 
                 # Determine dimming duration (if any)
                 duration_path = jedi_config.output_path + 'Duration/'
-                if not os.path.exists(duration_path):
-                    os.makedirs(duration_path)
 
                 plt.close('all')
                 duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(eve_line_event,
@@ -559,8 +551,6 @@ def produce_summary_plot(eve_lines_event, flare_index):
                          size=18, color='dodgerblue')
 
         summary_path = jedi_config.output_path + 'Summary Plots/'
-        if not os.path.exists(summary_path):
-            os.makedirs(summary_path)
         summary_filename = '{0}Event {1} {2} Parameter Summary.png'.format(summary_path, flare_index, column)
         plt.savefig(summary_filename)
         plt.close('all')
