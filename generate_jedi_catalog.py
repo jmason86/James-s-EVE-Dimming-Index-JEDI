@@ -4,7 +4,7 @@ import itertools
 from collections import OrderedDict
 import numpy as np
 import matplotlib as mpl
-#mpl.use('macosx') # For interactive plotting
+#mpl.use('macosx')  # For interactive plotting
 mpl.use('agg')
 from matplotlib import dates
 import pandas as pd
@@ -508,9 +508,18 @@ def produce_summary_plot(eve_lines_event, flare_index):
         duration_start_time = jedi_row[column + ' Duration Start Time'].values[0]
         duration_end_time = jedi_row[column + ' Duration End Time'].values[0]
 
+        if type(duration_end_time) is np.datetime64:
+            plot_window_end_time = duration_end_time + np.timedelta64(1, 'h')
+        elif type(depth_time) is np.datetime64:
+            plot_window_end_time = depth_time + np.timedelta64(1, 'h')
+        else:
+            plot_window_end_time = eve_line_event.index.values[-1]
+
+        plt.close('all')
         ax = eve_line_event['irradiance'].plot(color='black')
+        plt.xlim(jedi_row['GOES Flare Start Time'].values[0], plot_window_end_time)
         plt.axhline(linestyle='dashed', color='grey')
-        start_date = eve_line_event.index.values[0]
+        start_date = jedi_row['GOES Flare Start Time'].values[0]
         start_date_string = pd.to_datetime(str(start_date))
         plt.xlabel(start_date_string.strftime('%Y-%m-%d %H:%M:%S'))
         plt.ylabel('Irradiance [%]')
@@ -532,13 +541,13 @@ def produce_summary_plot(eve_lines_event, flare_index):
 
             inverse_str = '$^{-1}$'
             plt.annotate('slope_min={0} % s{1}'.format(latex_float(slope_min), inverse_str),
-                         xy=(0.98, 0.12), xycoords='axes fraction', ha='right',
+                         xy=(0.98, 0.88), xycoords='axes fraction', ha='right',
                          size=12, color=p[0].get_color())
             plt.annotate('slope_max={0} % s{1}'.format(latex_float(slope_max), inverse_str),
-                         xy=(0.98, 0.08), xycoords='axes fraction', ha='right',
+                         xy=(0.98, 0.84), xycoords='axes fraction', ha='right',
                          size=12, color=p[0].get_color())
             plt.annotate('slope_mean={0} % s{1}'.format(latex_float(slope_mean), inverse_str),
-                         xy=(0.98, 0.04), xycoords='axes fraction', ha='right',
+                         xy=(0.98, 0.80), xycoords='axes fraction', ha='right',
                          size=12, color=p[0].get_color())
 
         if not np.isnan(duration_seconds):
