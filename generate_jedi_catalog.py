@@ -44,10 +44,10 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
         flare_index_range [range]: The range of GOES flare indices to process. Default is range(0, 5052).
 
     Optional Inputs:
-        compute_new_preflare_irradiances [bool]:                Set to force reprocessing of pre-flare irradiances. Will also occur if preflare file doesn't exist on disk.
+        compute_new_preflare_irradiances [bool]: Set to force reprocessing of pre-flare irradiances. Will also occur if preflare file doesn't exist on disk.
 
     Outputs:
-        No direct return, but writes a csv to disk with the dimming paramerization results.
+        No direct return, but writes a csv to disk with the dimming parameterization results.
         Subroutines also optionally save processing plots to disk in jedi_config.output_path.
 
     Optional Outputs:
