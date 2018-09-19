@@ -1,6 +1,7 @@
 import jedi_config
 import os
 import numpy as np
+import pandas as pd
 
 # Initialize the config
 print('Initializing the jedi_config. This will take about a minute.')
@@ -26,7 +27,6 @@ def test_global_filenames_defined():
 
 
 def test_load_eve_data():
-    import pandas as pd
     assert isinstance(jedi_config.eve_lines, pd.DataFrame)
     assert len(jedi_config.eve_lines.columns) == 39  # The number of extracted emission lines
     assert len(jedi_config.eve_lines.index) > 1  # More than 1 time in the series
@@ -68,3 +68,20 @@ def test_all_minutes_since_last_flare_array():
 def test_preflare_indices_array():
     assert isinstance(jedi_config.preflare_indices, np.ndarray)
     assert len(jedi_config.preflare_indices) > 1
+
+
+def test_jedi_row():
+    jedi_row = jedi_config.init_jedi_row()
+
+    assert isinstance(jedi_row, pd.DataFrame)
+    assert len(jedi_row) == 1
+    assert os.path.isfile(jedi_config.jedi_csv_filename)
+    assert ion_names_for_jedi_row_created()
+
+
+def ion_names_for_jedi_row_created():
+    assert isinstance(jedi_config.ion_tuples, list)
+    assert len(jedi_config.ion_tuples) == 1482
+
+    assert isinstance(jedi_config.ion_permutations, pd.Index)
+    assert len(jedi_config.ion_permutations) == 1482
