@@ -1,5 +1,6 @@
 import jedi_config
 import os
+import numpy as np
 
 # Initialize the config
 print('Initializing the jedi_config. This will take about a minute.')
@@ -31,6 +32,39 @@ def test_load_eve_data():
     assert len(jedi_config.eve_lines.index) > 1  # More than 1 time in the series
     assert isinstance(jedi_config.eve_lines.index, pd.DatetimeIndex)
 
+
 def test_load_goes_flare_event_data():
     import scipy.io.idl as idl
     assert isinstance(jedi_config.goes_flare_events, idl.AttrDict)
+    assert goes_flare_event_dict_contains_expected_keys()
+    assert goes_flare_event_dict_values_are_expected_type()
+
+
+def goes_flare_event_dict_contains_expected_keys():
+    keys = list(jedi_config.goes_flare_events.keys())
+    assert 'class' in keys
+    assert 'event_peak_time_human' in keys
+    assert 'event_start_time_human' in keys
+    assert 'peak_time' in keys
+    assert 'start_time' in keys
+    return True
+
+
+def goes_flare_event_dict_values_are_expected_type():
+    assert isinstance(jedi_config.goes_flare_events['class'][0], str)
+    assert isinstance(jedi_config.goes_flare_events['event_peak_time_human'][0], str)
+    assert isinstance(jedi_config.goes_flare_events['event_start_time_human'][0], str)
+    from astropy.time.core import Time
+    assert isinstance(jedi_config.goes_flare_events['peak_time'], Time)
+    assert isinstance(jedi_config.goes_flare_events['start_time'], Time)
+    return True
+
+
+def test_all_minutes_since_last_flare_array():
+    assert isinstance(jedi_config.all_minutes_since_last_flare, np.ndarray)
+    assert len(jedi_config.all_minutes_since_last_flare) > 1
+
+
+def test_preflare_indices_array():
+    assert isinstance(jedi_config.preflare_indices, np.ndarray)
+    assert len(jedi_config.preflare_indices) > 1

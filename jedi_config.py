@@ -29,6 +29,8 @@ goes_flare_events = None
 logger = None
 jedi_csv_filename = None
 preflare_csv_filename = None
+all_minutes_since_last_flare = None
+preflare_indices = None
 ion_tuples = None
 ion_permutations = None
 
