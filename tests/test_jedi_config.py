@@ -3,10 +3,14 @@ import os
 import numpy as np
 import pandas as pd
 
-# Initialize the config
-print('Initializing the jedi_config. This will take about a minute.')
-jedi_config.init()  # Configures and loads everything
-print('jedi_config initialization complete.')
+jedi_config.init()  # Configures and loads everything - takes about 60 seconds
+
+
+def test_logger():
+    try:
+        jedi_config.logger.info('Executing tests only.')
+    except:
+        return False
 
 
 def test_folders_exist():
@@ -28,8 +32,8 @@ def test_global_filenames_defined():
 
 def test_load_eve_data():
     assert isinstance(jedi_config.eve_lines, pd.DataFrame)
-    assert len(jedi_config.eve_lines.columns) == 39  # The number of extracted emission lines
-    assert len(jedi_config.eve_lines.index) > 1  # More than 1 time in the series
+    assert len(jedi_config.eve_lines.columns) == 39  # The number of SDO/EVE extracted emission lines
+    assert len(jedi_config.eve_lines.index) > 1
     assert isinstance(jedi_config.eve_lines.index, pd.DatetimeIndex)
 
 
@@ -81,7 +85,7 @@ def test_jedi_row():
 
 def ion_names_for_jedi_row_created():
     assert isinstance(jedi_config.ion_tuples, list)
-    assert len(jedi_config.ion_tuples) == 1482
+    assert len(jedi_config.ion_tuples) == 1482  # The number of SDO/EVE extracted emission lines permutated
 
     assert isinstance(jedi_config.ion_permutations, pd.Index)
-    assert len(jedi_config.ion_permutations) == 1482
+    assert len(jedi_config.ion_permutations) == 1482  # The number of SDO/EVE extracted emission lines permutated

@@ -10,11 +10,11 @@ import itertools
 # Custom modules
 from jpm_logger import JpmLogger
 
-# Declare variables (some with defaults) to be accessed by anything that imports this module
+# Declare variables to be accessed by anything that imports this module
 eve_data_path = '/Users/jmason86/Dropbox/Research/Data/EVE/eve_lines_2010121-2014146 MEGS-A Mission Bare Bones.sav'
 goes_data_path = '/Users/jmason86/Dropbox/Research/Data/GOES/events/GoesEventsC1MinMegsAEra.sav'
 output_path = '/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'
-logger_filename = 'generate_jedi_catalog'  # 'generate_jedi_catalog'
+logger_filename = 'generate_jedi_catalog'
 
 threshold_time_prior_flare_minutes = 480.0
 dimming_window_relative_to_flare_minutes_left = -1.0
@@ -59,7 +59,7 @@ def init():
     global logger, all_minutes_since_last_flare, preflare_indices
 
     # Initialize logger
-    logger = JpmLogger(filename=logger_filename, path=output_path, console=False)
+    logger = JpmLogger(filename=logger_filename, path=output_path, console=True)
     logger.info('Logger initialized.')
 
     # Set up folders
