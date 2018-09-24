@@ -56,6 +56,9 @@ def determine_dimming_depth(light_curve_df,
         if jedi_config.verbose:
             jedi_config.logger.info("No latest allowed time provided. Setting to end of light curve: {0}".format(latest_allowed_time))
 
+    # Truncate light curve to earliest-latest time allowed
+    light_curve_df = light_curve_df[earliest_allowed_time:latest_allowed_time]
+
     # Optionally smooth the light curve with a rolling mean
     if smooth_points:
         light_curve_df['irradiance'] = light_curve_df.rolling(smooth_points, center=True).mean()
@@ -83,7 +86,7 @@ def determine_dimming_depth(light_curve_df,
         depth_time = light_curve_df.index[depth_index]
         depth = np.abs(light_curve_df['irradiance'].values[depth_index])
         if jedi_config.verbose:
-            jedi_config.logger.info('Depth determiend to be {0:.2f} at {1}'.format(depth, depth_time))
+            jedi_config.logger.info('Depth determined to be {0:.2f} at {1}'.format(depth, depth_time))
     else:
         depth = np.nan
         depth_time = np.nan
