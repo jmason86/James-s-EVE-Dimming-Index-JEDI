@@ -59,7 +59,7 @@ def init():
     global logger, all_minutes_since_last_flare, preflare_indices
 
     # Initialize logger
-    logger = JpmLogger(filename=logger_filename, path=output_path, console=True)
+    logger = JpmLogger(filename=logger_filename, path=output_path, console=False)
     logger.info('Logger initialized.')
 
     # Set up folders
