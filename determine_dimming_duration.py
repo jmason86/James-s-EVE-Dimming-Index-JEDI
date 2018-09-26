@@ -113,7 +113,7 @@ def determine_dimming_duration(light_curve_df,
         if found_duration:
             light_curve_df = light_curve_df.drop('diff', 1)
 
-        ax = light_curve_df['irradiance'].plot()
+        ax = light_curve_df['smooth'].plot()
         start_date = light_curve_df.index.values[0]
         start_date_string = pd.to_datetime(str(start_date))
         plt.xlabel(start_date_string.strftime('%Y-%m-%d %H:%M:%S'))
