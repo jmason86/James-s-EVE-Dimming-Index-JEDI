@@ -11,4 +11,4 @@ def make_light_curve():
 
 
 def normalized_irradiance_in_percent_units(light_curve):
-    return (light_curve['irradiance'] - light_curve['irradiance'].iloc[0]) / light_curve['irradiance'].iloc[0] * 100.0
+    return pd.DataFrame((light_curve['irradiance'] - light_curve['irradiance'].iloc[0]) / light_curve['irradiance'].iloc[0] * 100.0)
