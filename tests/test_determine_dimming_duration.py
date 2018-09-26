@@ -33,7 +33,5 @@ def early_cutoff_works(light_curve):
     duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(light_curve.copy(),
                                                                                           smooth_points=50,
                                                                                           earliest_allowed_time=time_early)
-    # TODO: Pickup here
-    print(duration_seconds)
-    print(duration_start_time)
-    print(duration_end_time)
+    if (duration_seconds is np.nan) and (duration_start_time is np.nan) and (duration_end_time is np.nan):
+        return True
