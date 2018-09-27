@@ -50,6 +50,10 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
     if jedi_config.verbose:
         jedi_config.logger.info("Running on event with peak start time of {0}.".format(estimated_time_of_peak_start))
 
+    if estimated_time_of_peak_start < light_curve_df.index[0]:
+        raise ValueError('The provided estimated_time_of_peak_start: {0} is earlier than the earliest time in the light curve: {1}'.format(estimated_time_of_peak_start, light_curve_df.index[0]),
+                         'too_early_time_of_peak_start')
+
     # Verify that not all values are nan
     if light_curve_df.isna().all().all():
         if jedi_config.verbose:
