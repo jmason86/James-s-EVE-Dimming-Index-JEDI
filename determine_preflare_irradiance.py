@@ -32,7 +32,7 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
                                            in percent terms. This value gets multiplied by the mean of the stds from
                                            each sub-window and is then compared to the max_median_diff. The default is 1.5.
         std_threshold [float]:             The maximum allowed standard deviation in the pre-flare windows in percent
-                                           terms. The default is 0.5.
+                                           terms. The default is 1.0.
         plot_path_filename [str]:          Set to a path and filename in order to save the summary plot to disk.
                                            Default is None, meaning the plot will not be saved to disk.
 
