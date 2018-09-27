@@ -13,6 +13,8 @@ class TestBaselineDetermination:
 
         self.nominal_case_returns_expected_values()
         self.low_median_diff_threshold_fails()
+        self.low_std_threshold_fails()
+        assert self.too_early_time_of_peak_start_fails()
 
     def nominal_case_returns_expected_values(self):
         preflare_irradiance = determine_preflare_irradiance(self.light_curve.copy(),
@@ -24,3 +26,20 @@ class TestBaselineDetermination:
                                                             estimated_time_of_peak_start=self.flare_peak_time,
                                                             max_median_diff_threshold=0.5)
         assert preflare_irradiance is np.nan
+
+    def low_std_threshold_fails(self):
+        preflare_irradiance = determine_preflare_irradiance(self.light_curve.copy(),
+                                                            estimated_time_of_peak_start=self.flare_peak_time,
+                                                            std_threshold=0.39)
+        assert preflare_irradiance is np.nan
+
+    def too_early_time_of_peak_start_fails(self):
+        too_early_time = pd.Timestamp('2010-08-07 09:00:00')
+        try:
+            determine_preflare_irradiance(self.light_curve.copy(), estimated_time_of_peak_start=too_early_time)
+        except ValueError as error:
+            if len(error.args) == 2:
+                if error.args[1] == 'too_early_time_of_peak_start':
+                    return True
+        else:
+            return False
