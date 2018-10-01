@@ -1,11 +1,10 @@
 from make_light_curve import make_light_curve, normalized_irradiance_in_percent_units
 from determine_dimming_slope import determine_dimming_slope
-import numpy as np
 from numpy.testing import assert_approx_equal
 import pandas as pd
 
 
-class TestSlope():
+class TestSlope:
     def test_slope(self):
         light_curve = make_light_curve()
         self.light_curve = normalized_irradiance_in_percent_units(light_curve)

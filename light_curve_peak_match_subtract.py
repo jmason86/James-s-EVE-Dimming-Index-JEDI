@@ -37,7 +37,6 @@ def light_curve_peak_match_subtract(light_curve_to_subtract_from_df, light_curve
         scale_factor [float]:                    The multiplicative factor applied to light_curve_to_subtract_with_df to get
                                                  its peak to match light_curve_to_subtract_from_df. Returns np.nan if
                                                  the peaks couldn't be found.
-
     Optional Outputs:
         None
 
