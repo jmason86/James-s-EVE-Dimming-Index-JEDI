@@ -174,7 +174,7 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
                             '$\sigma$ condition ok: ' + str(not failed_std_threshold),
                             fontsize=11, ha='center', va='top', color='tomato')
             except IndexError as error_index:
-                jedi_config.logger.error(error_index)
+                jedi_config.logger.error('{}'.format(error_index))
 
             # Third window
             try:
@@ -194,7 +194,7 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
                         r'thresh $\times \mu_{\sigma n}$ = ' + latex_float(max_median_diff_threshold * np.mean(stds)) + '%',
                         fontsize=11, ha='right', va='top')
             except IndexError as error_index:
-                jedi_config.logger.error(error_index)
+                jedi_config.logger.error('{}'.format(error_index))
 
             # Increase border so y-axes don't get cut off in savefig, even though they don't in plt.show()
             plt.gcf().subplots_adjust(left=0.22)
@@ -203,7 +203,7 @@ def determine_preflare_irradiance(light_curve_df, estimated_time_of_peak_start,
             if jedi_config.verbose:
                 jedi_config.logger.info("Summary plot for event with start time {0} saved to {1}".format(estimated_time_of_peak_start, plot_path_filename))
         except ValueError as error:
-            jedi_config.logger.error(error)
+            jedi_config.logger.error('{}'.format(error))
 
     return preflare_irradiance
 
