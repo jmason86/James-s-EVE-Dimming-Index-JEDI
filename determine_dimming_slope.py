@@ -30,7 +30,6 @@ def determine_dimming_slope(light_curve_df,
                                           Default is 0, meaning no smoothing will be performed.
         plot_path_filename [str]:         Set to a path and filename in order to save the summary plot to disk.
                                           Default is None, meaning the plot will not be saved to disk.
-        verbose [bool]:                   Set to log the processing messages to disk and console. Default is False.
 
     Outputs:
         slope_min [float]: The minimum slope of dimming in percent/second terms.
