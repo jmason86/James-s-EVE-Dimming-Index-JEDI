@@ -244,7 +244,7 @@ def clip_eve_data_to_dimming_window(flare_index):
 
     # Clip EVE data to dimming window
     bracket_time_left = (jedi_config.goes_flare_events['peak_time'][flare_index] + (jedi_config.dimming_window_relative_to_flare_minutes_left * u.minute))
-    next_flare_time = Time((jedi_config.goes_flare_events['peak_time'][flare_index + 1]).iso)
+    next_flare_time = jedi_config.goes_flare_events['peak_time'][flare_index + 1]
     user_choice_time = (jedi_config.goes_flare_events['peak_time'][flare_index] + (jedi_config.dimming_window_relative_to_flare_minutes_right * u.minute))
     bracket_time_right = min(next_flare_time, user_choice_time)
 
