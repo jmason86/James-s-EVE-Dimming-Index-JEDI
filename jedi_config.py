@@ -220,8 +220,8 @@ def load_goes_flare_event_data():
     goes_flare_events['class'] = goes_flare_events['class'].astype(str)
     goes_flare_events['event_peak_time_human'] = goes_flare_events['event_peak_time_human'].astype(str)
     goes_flare_events['event_start_time_human'] = goes_flare_events['event_start_time_human'].astype(str)
-    goes_flare_events['peak_time'] = Time(goes_flare_events['event_peak_time_jd'], format='jd', scale='utc')
-    goes_flare_events['start_time'] = Time(goes_flare_events['event_start_time_jd'], format='jd', scale='utc')
+    goes_flare_events['peak_time'] = Time(goes_flare_events['event_peak_time_jd'], format='jd', scale='utc', precision=0)
+    goes_flare_events['start_time'] = Time(goes_flare_events['event_start_time_jd'], format='jd', scale='utc', precision=0)
 
 
 def init_jedi_row():
