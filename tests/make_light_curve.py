@@ -24,7 +24,7 @@ def normalized_irradiance_in_percent_units(light_curve):
 
 def make_preflare_light_curve():
     flare_peak_time = '2010-08-07 18:24:00'
-    preflare_start_time = (Time(flare_peak_time) - (jedi_config.threshold_time_prior_flare_minutes * u.minute)).iso
+    preflare_start_time = (Time(flare_peak_time, precision=0) - (jedi_config.threshold_time_prior_flare_minutes * u.minute)).iso
     light_curve = pd.DataFrame(jedi_config.eve_lines.loc[preflare_start_time:flare_peak_time, '17.1'])
     light_curve.columns = ['irradiance']
     return light_curve
