@@ -80,7 +80,7 @@ def test_jedi_row():
     assert isinstance(jedi_row, pd.DataFrame)
     assert len(jedi_row) == 1
     assert os.path.isfile(jedi_config.jedi_csv_filename)
-    assert ion_names_for_jedi_row_created()
+    ion_names_for_jedi_row_created()
 
 
 def ion_names_for_jedi_row_created():
