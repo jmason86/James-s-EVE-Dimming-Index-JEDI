@@ -251,7 +251,7 @@ def get_preflare_irradiance_all_emission_lines(flare_index):
     return preflare_irradiance, preflare_window_start, preflare_window_end
 
 
-def multiprocess_preflare_irradiance(preflare_indices):
+def multiprocess_preflare_irradiance():
     """Multi-threaded processing of pre-flare irradiance across time-independent flares
 
         Inputs:
@@ -272,14 +272,14 @@ def multiprocess_preflare_irradiance(preflare_indices):
             preflare_irradiance, preflare_window_start, preflare_window_end = multiprocess_preflare_irradiance(preflare_indices, 4)
     """
     if jedi_config.verbose:
-        jedi_config.logger.info("Running on {0} events with {1} threads.".format(len(preflare_indices), jedi_config.n_threads))
+        jedi_config.logger.info("Running on {0} events with {1} threads.".format(len(jedi_config.preflare_indices), jedi_config.n_threads))
 
     if jedi_config.n_threads == 1:
-        preflare_irradiances, preflare_windows_start, preflare_windows_end = zip(*map(get_preflare_irradiance_all_emission_lines, preflare_indices))
+        preflare_irradiances, preflare_windows_start, preflare_windows_end = zip(*map(get_preflare_irradiance_all_emission_lines, jedi_config.preflare_indices))
         jedi_config.logger.info('Preparing export of dataframe.')
     else:
         pool = mp.Pool(processes=jedi_config.n_threads)
-        preflare_irradiances, preflare_windows_start, preflare_windows_end = zip(*pool.map(get_preflare_irradiance_all_emission_lines, preflare_indices))
+        preflare_irradiances, preflare_windows_start, preflare_windows_end = zip(*pool.map(get_preflare_irradiance_all_emission_lines, jedi_config.preflare_indices))
         pool.close()
         jedi_config.logger.info('Pool closed. Preparing export of dataframe.')
 

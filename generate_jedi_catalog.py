@@ -81,7 +81,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
         jedi_config.logger.info('Recomputing pre-flare irradiances.')
         preflare_irradiances, \
             preflare_windows_start, \
-            preflare_windows_end = multiprocess_preflare_irradiance(jedi_config.preflare_indices)
+            preflare_windows_end = multiprocess_preflare_irradiance()
         jedi_config.logger.info('Finished processing pre-flare irradiances. Writing them to disk.')
         preflare_df = pd.DataFrame()
         preflare_df['Pre-Flare Start Time'] = preflare_windows_start
