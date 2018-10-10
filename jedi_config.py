@@ -16,7 +16,7 @@ goes_data_path = '/Users/jmason86/Dropbox/Research/Data/GOES/events/GoesEventsC1
 output_path = '/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'
 logger_filename = 'generate_jedi_catalog'
 
-threshold_time_prior_flare_minutes = 480.0
+threshold_time_prior_flare_minutes = 300.0
 dimming_window_relative_to_flare_minutes_left = -1.0
 dimming_window_relative_to_flare_minutes_right = 1440.0
 threshold_minimum_dimming_window_minutes = 120.0
