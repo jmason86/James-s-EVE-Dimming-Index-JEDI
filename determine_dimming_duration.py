@@ -85,11 +85,12 @@ def determine_dimming_duration(light_curve_df,
                 jedi_config.logger.warning('No negative slope 0-crossing found. Duration cannot be defined.')
             found_duration = False
 
-    # Find the first postiive slope zero crossing
+    # Find the first subsequent positive slope zero crossing
     if found_duration:
         pos_zero_crossing_indices = np.where(light_curve_df['diff'][zero_crossing_indices + 1] > 0)[0]
-        if len(pos_zero_crossing_indices) > 0:
-            first_pos_zero_crossing_index = pos_zero_crossing_indices[0]
+        subsequent_pos_zero_crossing_indices = pos_zero_crossing_indices[np.where(light_curve_df.iloc[zero_crossing_indices[pos_zero_crossing_indices]].index > first_neg_zero_crossing_time)[0]]
+        if len(subsequent_pos_zero_crossing_indices) > 0:
+            first_pos_zero_crossing_index = subsequent_pos_zero_crossing_indices[0]
             first_pos_zero_crossing_time = light_curve_df.index[zero_crossing_indices[first_pos_zero_crossing_index]]
         else:
             if jedi_config.verbose:
@@ -124,9 +125,9 @@ def determine_dimming_duration(light_curve_df,
         plt.title('Dimming Duration')
 
         if found_duration:
-            plt.scatter([zero_crossing_times[first_neg_zero_crossing_index], zero_crossing_times[first_pos_zero_crossing_index]],
-                        [light_curve_df['smooth'][zero_crossing_indices[first_neg_zero_crossing_index]],
-                         light_curve_df['smooth'][zero_crossing_indices[first_pos_zero_crossing_index]]],
+            plt.scatter([first_neg_zero_crossing_time, first_pos_zero_crossing_time],
+                        [light_curve_df['smooth'].loc[first_neg_zero_crossing_time],
+                         light_curve_df['smooth'].loc[first_pos_zero_crossing_time]],
                         c='black', s=300, zorder=3)
             plt.annotate('', xy=(first_neg_zero_crossing_time, 0), xycoords='data',
                          xytext=(first_pos_zero_crossing_time, 0), textcoords='data',
