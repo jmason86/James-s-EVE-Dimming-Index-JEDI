@@ -16,30 +16,36 @@ def test_depth():
 
 
 def no_points_below_zero_returns_nan(light_curve):
-    depth, time = determine_dimming_depth(light_curve.copy())
-    if (depth is np.nan) and (time is np.nan):
+    depth_first, time_first, depth_max, time_max = determine_dimming_depth(light_curve.copy())
+    if (depth_first is np.nan) and (time_first is np.nan) and (depth_max is np.nan) and (time_max is np.nan):
         return True
 
 
 def nominal_case_returns_expected_values(light_curve):
-    depth, time = determine_dimming_depth(light_curve.copy(), smooth_points=50)
-    assert_approx_equal(depth, 1.66, significant=3)
-    assert time == pd.Timestamp('2010-08-07 19:36:11')
+    depth_first, time_first, depth_max, time_max = determine_dimming_depth(light_curve.copy(), smooth_points=50)
+    assert_approx_equal(depth_first, 1.66, significant=3)
+    assert time_first == pd.Timestamp('2010-08-07 19:36:11')
+    assert_approx_equal(depth_max, 1.82, significant=3)
+    assert time_max == pd.Timestamp('2010-08-07 20:05:11')
 
 
 def early_cutoff_works(light_curve):
     time_early = pd.Timestamp('2010-08-07 19:40:00')
-    depth, time = determine_dimming_depth(light_curve.copy(),
-                                          smooth_points=50,
-                                          earliest_allowed_time=time_early)
-    assert_approx_equal(depth, 1.79, significant=3)
-    assert time == pd.Timestamp('2010-08-07 20:10:11')
+    depth_first, time_first, depth_max, time_max = determine_dimming_depth(light_curve.copy(),
+                                                                           smooth_points=50,
+                                                                           earliest_allowed_time=time_early)
+    assert_approx_equal(depth_first, 1.79, significant=3)
+    assert time_first == pd.Timestamp('2010-08-07 20:10:11')
+    assert_approx_equal(depth_max, 1.79, significant=3)
+    assert time_max == pd.Timestamp('2010-08-07 20:10:11')
 
 
 def late_cutoff_works(light_curve):
     time_late = pd.Timestamp('2010-08-07 19:40:00')
-    depth, time = determine_dimming_depth(light_curve.copy(),
-                                          smooth_points=50,
-                                          latest_allowed_time=time_late)
-    assert_approx_equal(depth, 0.841, significant=3)
-    assert time == pd.Timestamp('2010-08-07 19:15:11')
+    depth_first, time_first, depth_max, time_max = determine_dimming_depth(light_curve.copy(),
+                                                                           smooth_points=50,
+                                                                           latest_allowed_time=time_late)
+    assert_approx_equal(depth_first, 0.841, significant=3)
+    assert time_first == pd.Timestamp('2010-08-07 19:15:11')
+    assert_approx_equal(depth_max, 0.841, significant=3)
+    assert time_max == pd.Timestamp('2010-08-07 19:15:11')
