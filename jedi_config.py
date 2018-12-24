@@ -225,7 +225,7 @@ def load_goes_flare_event_data():
 
 
 def init_jedi_row():
-    """Internal-use function for defining the column headers in the JEDI catalog and starting a fresh csv file on disk
+    """Internal-use function for defining the column headers in the JEDI catalog
 
         Inputs:
             None. Draws from the globals set up in init. So you must run the init function before calling this function.
@@ -259,17 +259,17 @@ def init_jedi_row():
     ion_tuples = list(itertools.permutations(eve_lines.columns.values, 2))
     ion_permutations = pd.Index([' by '.join(ion_tuples[i]) for i in range(len(ion_tuples))])
 
-    jedi_row.set_index('Event #', inplace=True)
     jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Pre-Flare Irradiance [W/m2]'))
-
     jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Start Time'))
     jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope End Time'))
     jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Min [%/s]'))
     jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Max [%/s]'))
     jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Mean [%/s]'))
     jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Slope Uncertainty [%/s]'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Depth Time'))
-    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Depth [%]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Depth First Time'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Depth First [%]'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Depth Max Time'))
+    jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Depth Max [%]'))
     jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Depth Uncertainty [%]'))
     jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Duration Start Time'))
     jedi_row = jedi_row.join(pd.DataFrame(columns=eve_lines.columns + ' Duration End Time'))
@@ -294,6 +294,27 @@ def init_jedi_row():
     jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Fitting Gamma'))
     jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Fitting Score'))
 
+    return jedi_row
+
+
+def write_new_jedi_file_to_disk(jedi_row):
+    """Write a jedi_row to disk as a csv file -- intended to be called after first initialization of jedi_row
+
+           Inputs:
+               jedi_row [pandas DataFrame]: The JEDI DataFrame to be written
+
+           Optional Inputs:
+               None
+
+           Outputs:
+               csv file on disk
+
+           Optional Outputs:
+                None
+
+           Example:
+               jedi_row = init_jedi_row()
+               write_new_jedi_file_to_disk(jedi_row)
+       """
     # Start a new csv file on disk and return the jedi row dataframe
     jedi_row.to_csv(jedi_csv_filename, header=True, index=False, mode='w')
-    return jedi_row
