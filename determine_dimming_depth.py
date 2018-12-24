@@ -31,15 +31,16 @@ def determine_dimming_depth(light_curve_df,
                                           Default is None, meaning the plot will not be saved to disk.
 
     Outputs:
-        depth_percent [float]:     The depth of dimming in percent terms. np.nan if failed to determine.
-        depth_time [pd.Timestamp]: The time of the depth. np.nan if failed to determine.
+        depth_first [float]:             The first detected depth of dimming in percent terms. np.nan if indeterminable.
+        depth_first_time [pd.Timestamp]: The time of the first depth. np.nan if indeterminable.
+        depth_max [float]:               The max detected depth of dimming in percent terms. np.nan if indeterminable.
+        depth_max_time [pd.Timestamp]:   The time of the max depth. np.nan if indeterminable.
 
     Optional Outputs:
         None
 
     Example:
-        depth_percent, depth_time = determine_dimming_depth(light_curve_df,
-                                                            plot_path_filename='./bla.png')
+        depth_first, depth_first_time, depth_max, depth_max_time = determine_dimming_depth(light_curve_df)
     """
     if jedi_config.verbose:
         jedi_config.logger.info("Running on event with light curve start time of {0}.".format(light_curve_df.index[0]))
@@ -79,17 +80,25 @@ def determine_dimming_depth(light_curve_df,
         else:
             jedi_config.logger.warning('No local minima found.')
 
-    # Apply conditions to obtain what we'll call the dimming depth
+    # Apply conditions to obtain first and max dimming depths
     less_than_zero_indices = minima_indices[minima_irradiances < 0]  # Assumes 0 is the baseline
     if less_than_zero_indices.size > 0:
-        depth_index = less_than_zero_indices[0]  # First one
-        depth_time = light_curve_df.index[depth_index]
-        depth = np.abs(light_curve_df['irradiance'].values[depth_index])
+        depth_first_index = less_than_zero_indices[0]
+        depth_first_time = light_curve_df.index[depth_first_index]
+        depth_first = np.abs(light_curve_df['irradiance'].values[depth_first_index])
+
+        depth_max_index = np.argmax(np.abs(minima_irradiances))
+        depth_max_time = light_curve_df.index[minima_indices[depth_max_index]]
+        depth_max = max(np.abs(minima_irradiances))
+
         if jedi_config.verbose:
-            jedi_config.logger.info('Depth determined to be {0:.2f} at {1}'.format(depth, depth_time))
+            jedi_config.logger.info('First depth determined to be {0:.2f} at {1}'.format(depth_first, depth_first_time))
+            jedi_config.logger.info('Max depth determined to be {0:.2f} at {1}'.format(depth_max, depth_max_time))
     else:
-        depth = np.nan
-        depth_time = np.nan
+        depth_first = np.nan
+        depth_first_time = np.nan
+        depth_max = np.nan
+        depth_max_time = np.nan
         if jedi_config.verbose and minima_indices.size > 0:
             jedi_config.logger.warning('None of the minima are below 0.')
 
@@ -102,10 +111,13 @@ def determine_dimming_depth(light_curve_df,
         ax = light_curve_df['irradiance'].plot()
         plt.scatter(minima_times, minima_irradiances,
                     c='black', s=300, zorder=3, label='minima')
-        if depth:
-            plt.scatter(depth_time, -depth,
-                        c='goldenrod', s=300, zorder=3, label='depth')
-            plt.title('Depth at ' + str(depth_time))
+        if depth_first:
+            plt.scatter(depth_first_time, -depth_first,
+                        c='goldenrod', s=300, zorder=3, label='first depth')
+            plt.scatter(depth_max_time, -depth_max,
+                        c='tomato', s=300, zorder=3, label='max depth')
+            plt.title('First Depth at {0} \n'
+                      'Max Depth at {1}'.format(depth_first_time, depth_max_time))
         else:
             plt.title('No Depth Found')
         plt.axhline(linestyle='dashed', color='black')
@@ -118,17 +130,23 @@ def determine_dimming_depth(light_curve_df,
         ax.xaxis.set_major_locator(dates.HourLocator())
         ax.legend(loc='best')
 
-        if depth:
-            plt.annotate('', xy=(depth_time, -depth), xycoords='data',
-                         xytext=(depth_time, 0), textcoords='data',
+        if depth_first:
+            plt.annotate('', xy=(depth_first_time, -depth_first), xycoords='data',
+                         xytext=(depth_first_time, 0), textcoords='data',
                          arrowprops=dict(facecolor='goldenrod', edgecolor='goldenrod', linewidth=2))
-            mid_depth = -depth / 2.0
-            plt.annotate('{0:.2f}'.format(depth), xy=(depth_time, mid_depth), xycoords='data',
-                         ha='right', va='center', rotation=90, size=18, color='goldenrod')
+            mid_depth = -depth_first / 2.0
+            plt.annotate('{0:.2f}'.format(depth_first), xy=(depth_first_time, mid_depth), xycoords='data',
+                         ha='left', va='center', rotation=90, size=18, color='goldenrod')
+
+            plt.annotate('', xy=(depth_max_time, -depth_max), xycoords='data',
+                         xytext=(depth_max_time, 0), textcoords='data',
+                         arrowprops=dict(facecolor='tomato', edgecolor='tomato', linewidth=2))
+            mid_depth = -depth_max / 2.0
+            plt.annotate('{0:.2f}'.format(depth_max), xy=(depth_max_time, mid_depth), xycoords='data',
+                         ha='right', va='center', rotation=90, size=18, color='tomato')
 
         plt.savefig(plot_path_filename)
         if jedi_config.verbose:
             jedi_config.logger.info("Summary plot saved to %s" % plot_path_filename)
 
-    # Return the depth
-    return depth, depth_time
+    return depth_first, depth_first_time, depth_max, depth_max_time
