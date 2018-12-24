@@ -109,6 +109,7 @@ def determine_dimming_duration(light_curve_df,
 
     if plot_path_filename:
         plt.style.use('jpm-transparent-light')
+        plt.close('all')
         from matplotlib import dates
 
         if found_duration:
