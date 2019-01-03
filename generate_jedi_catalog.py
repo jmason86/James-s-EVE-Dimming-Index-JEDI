@@ -214,12 +214,10 @@ def map_flare_index_to_preflare_index(flare_index):
         preflare_index = map_flare_index_to_preflare_index(flare_index)
     """
     is_independent_flare = jedi_config.all_minutes_since_last_flare > jedi_config.threshold_time_prior_flare_minutes
-    irange = range(0, is_independent_flare.size)
-    invalid_index = -1
-    idx = np.where(is_independent_flare)[0]
-    sidx = np.searchsorted(idx, irange, 'right')-1
-    preflare_map_indices = np.where(sidx == -1, invalid_index, idx[sidx])
-    return preflare_map_indices[flare_index - 1]
+    all_flare_indices = range(0, is_independent_flare.size)
+    independent_flare_indices = np.where(is_independent_flare)[0]
+    sidx = np.searchsorted(independent_flare_indices, all_flare_indices, 'right') - 1
+    return sidx[flare_index]
 
 
 def clip_eve_data_to_dimming_window(flare_index):
