@@ -1,7 +1,5 @@
 # Standard modules
 import os
-import itertools
-from collections import OrderedDict
 import numpy as np
 import matplotlib as mpl
 #mpl.use('macosx')  # For interactive plotting
@@ -13,8 +11,6 @@ import astropy.units as u
 from astropy.time import Time
 import time
 #import progressbar
-import multiprocessing as mp
-from functools import partial
 
 # Custom modules
 from jpm_number_printing import latex_float
@@ -642,12 +638,5 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
 
 
 if __name__ == '__main__':
-    # Parallel processing method
-    # with mp.Pool(processes=6) as pool:
-    #     for events in range(78, 148, 5):
-    #         generate_jedi_catalog_function_1_varying_input = partial(generate_jedi_catalog)
-    #         print('Should be running from {0} to {1}'.format(events, events + 5))
-    #         pool.map(generate_jedi_catalog, range(events, events + 5))
-    
-    # Just run code over some range
-    generate_jedi_catalog(range(1, 400))
+    #generate_jedi_catalog(range(1, 2632))
+    merge_jedi_catalog_files()
