@@ -154,6 +154,9 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
             loop_light_curve_fit(eve_lines_event, flare_index, uncertainty)
             print('Time to do fitting [s]: {0}'.format(time.time() - time_fitting))
 
+            # Force the array to use numeric types where applicable rather than objects
+            jedi_row = jedi_row.apply(pd.to_numeric, errors='ignore')
+
             # Save the dimming event data to disk for quicker restore
             jedi_row.to_hdf(processed_jedi_non_params_filename, 'jedi_row')
             eve_lines_event.to_hdf(processed_lines_filename, 'eve_lines_event')
@@ -168,6 +171,9 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
 
         # Produce a summary plot for each light curve
         produce_summary_plot(eve_lines_event, flare_index) # TODO: Uncomment this
+
+        # Force the array to use numeric types where applicable rather than objects
+        jedi_row = jedi_row.apply(pd.to_numeric, errors='ignore')
 
         # Write to the JEDI catalog on disk
         jedi_row.to_hdf('{0} Event {1}.h5'.format(jedi_config.jedi_hdf_filename, flare_index), key='jedi_row', mode='w')
@@ -629,14 +635,15 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
     jedi_row_standard = jedi_config.init_jedi_row()
     cols = jedi_row_standard.columns.tolist()
     jedi_catalog_df = jedi_catalog_df[cols]
+    jedi_catalog_df = jedi_catalog_df.apply(pd.to_numeric, errors='ignore')
     if jedi_config.verbose:
         print("Read files, sorted, dropped empty and duplicate rows, and reset index.")
 
     # Write the catalog to disk
-    csv_filename = file_path + 'jedi_merged_{0}.h5'.format(Time.now().iso)
-    jedi_catalog_df.to_hdf(csv_filename, key='jedi', mode='w')
+    hdf_filename = file_path + 'jedi_merged_{0}.h5'.format(Time.now().iso)
+    jedi_catalog_df.to_hdf(hdf_filename, key='jedi', mode='w')
     if jedi_config.verbose:
-        print("Wrote merged file to {0}".format(csv_filename))
+        print("Wrote merged file to {0}".format(hdf_filename))
 
     return 1
 
