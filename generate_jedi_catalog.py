@@ -625,6 +625,10 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
     jedi_catalog_df.drop_duplicates(inplace=True)
     jedi_catalog_df.sort_values(by=['Event #'], inplace=True)
     jedi_catalog_df.reset_index(drop=True, inplace=True)
+    jedi_config.init()
+    jedi_row_standard = jedi_config.init_jedi_row()
+    cols = jedi_row_standard.columns.tolist()
+    jedi_catalog_df = jedi_catalog_df[cols]
     if jedi_config.verbose:
         print("Read files, sorted, dropped empty and duplicate rows, and reset index.")
 
