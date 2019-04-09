@@ -167,12 +167,12 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
         determine_dimming_parameters(eve_lines_event, flare_index)
 
         # Produce a summary plot for each light curve
-        produce_summary_plot(eve_lines_event, flare_index)
+        produce_summary_plot(eve_lines_event, flare_index) # TODO: Uncomment this
 
         # Write to the JEDI catalog on disk
-        jedi_row.to_csv(jedi_config.jedi_csv_filename, header=False, index=False, mode='a')
+        jedi_row.to_hdf('{0} Event {1}.h5'.format(jedi_config.jedi_hdf_filename, flare_index), key='jedi_row', mode='w')
         if jedi_config.verbose:
-            jedi_config.logger.info('Event {0} JEDI row written to {1}.'.format(flare_index, jedi_config.jedi_csv_filename))
+            jedi_config.logger.info('Event {0} JEDI row written to {1}.'.format(flare_index, jedi_config.jedi_hdf_filename))
 
         # Update progress bar
         #progress_bar.update(flare_index)
@@ -256,7 +256,7 @@ def clip_eve_data_to_dimming_window(flare_index):
 
     if ((bracket_time_right - bracket_time_left).sec / 60.0) < jedi_config.threshold_minimum_dimming_window_minutes:
         # Leave all dimming parameters as NaN and write this null result to the CSV on disk
-        jedi_row.to_csv(jedi_config.jedi_csv_filename, header=False, index=False, mode='a')
+        jedi_row.to_hdf(jedi_config.jedi_hdf_filename, 'jedi_row')
 
         # Log message
         if jedi_config.verbose:
@@ -617,8 +617,8 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
     # Create one sorted, clean dataframe from all of the csv files
     list_dfs = []
     for file in os.listdir(file_path):
-        if file.endswith(".csv") and "merged" not in file:
-            jedi_rows = pd.read_csv(os.path.join(file_path, file), index_col=None, header=0, low_memory=False)
+        if file.endswith(".h5") and "merged" not in file:
+            jedi_rows = pd.read_hdf(os.path.join(file_path, file), 'jedi_row')
             list_dfs.append(jedi_rows)
     jedi_catalog_df = pd.concat(list_dfs, ignore_index=True)
     jedi_catalog_df.dropna(axis=0, how='all', inplace=True)
@@ -629,8 +629,8 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
         print("Read files, sorted, dropped empty and duplicate rows, and reset index.")
 
     # Write the catalog to disk
-    csv_filename = file_path + 'jedi_merged_{0}.csv'.format(Time.now().iso)
-    jedi_catalog_df.to_csv(csv_filename, header=True, index=False, mode='w')
+    csv_filename = file_path + 'jedi_merged_{0}.h5'.format(Time.now().iso)
+    jedi_catalog_df.to_hdf(csv_filename, key='jedi', mode='w')
     if jedi_config.verbose:
         print("Wrote merged file to {0}".format(csv_filename))
 
@@ -638,5 +638,5 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
 
 
 if __name__ == '__main__':
-    #generate_jedi_catalog(range(1, 2632))
+    #generate_jedi_catalog(range(362, 5052))
     merge_jedi_catalog_files()

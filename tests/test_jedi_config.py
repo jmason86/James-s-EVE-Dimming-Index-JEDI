@@ -26,7 +26,7 @@ def test_folders_exist():
 
 
 def test_global_filenames_defined():
-    assert jedi_config.jedi_csv_filename is not None  # Can't test precise name since it includes a time-of-creation timestamp
+    assert jedi_config.jedi_hdf_filename is not None  # Can't test precise name since it includes a time-of-creation timestamp
     assert jedi_config.preflare_csv_filename == os.path.join(jedi_config.output_path, 'Preflare Determination/Preflare Irradiances.csv')
 
 
@@ -76,10 +76,11 @@ def test_preflare_indices_array():
 
 def test_jedi_row():
     jedi_row = jedi_config.init_jedi_row()
+    jedi_config.write_new_jedi_file_to_disk(jedi_row)
 
     assert isinstance(jedi_row, pd.DataFrame)
     assert len(jedi_row) == 1
-    assert os.path.isfile(jedi_config.jedi_csv_filename)
+    assert os.path.isfile(jedi_config.jedi_hdf_filename)
     ion_names_for_jedi_row_created()
 
 

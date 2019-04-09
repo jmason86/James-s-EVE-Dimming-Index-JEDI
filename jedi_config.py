@@ -27,7 +27,7 @@ verbose = True  # Set to log the processing messages to disk and console.
 eve_lines = None
 goes_flare_events = None
 logger = None
-jedi_csv_filename = None
+jedi_hdf_filename = None
 preflare_csv_filename = None
 all_minutes_since_last_flare = None
 preflare_indices = None
@@ -142,7 +142,7 @@ def init_filenames():
 
         Outputs:
             No return. Updates global variables.
-            jedi_csv_filename [str]:     The unique path/filename for the jedi catalog in this run to be stored in on disk.
+            jedi_hdf_filename [str]:     The unique path/filename for the jedi catalog in this run to be stored in on disk.
             preflare_csv_filename [str]: The path/filename of the computed pre-flare irradiances.
 
         Optional Outputs:
@@ -151,8 +151,8 @@ def init_filenames():
         Example:
             init_filenames()
     """
-    global jedi_csv_filename, preflare_csv_filename
-    jedi_csv_filename = output_path + 'jedi_{0}.csv'.format(Time.now().iso)
+    global jedi_hdf_filename, preflare_csv_filename
+    jedi_hdf_filename = output_path + 'jedi_{0}'.format(Time.now().iso)
     preflare_csv_filename = os.path.join(output_path, 'Preflare Determination/Preflare Irradiances.csv')
 
 
@@ -318,5 +318,4 @@ def write_new_jedi_file_to_disk(jedi_row):
                jedi_row = init_jedi_row()
                write_new_jedi_file_to_disk(jedi_row)
        """
-    # Start a new csv file on disk and return the jedi row dataframe
-    jedi_row.to_csv(jedi_csv_filename, header=True, index=False, mode='w')
+    jedi_row.to_hdf(jedi_hdf_filename, key='jedi', mode='w')
