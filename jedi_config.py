@@ -296,6 +296,9 @@ def init_jedi_row():
     jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Fitting Gamma'))
     jedi_row = jedi_row.join(pd.DataFrame(columns=ion_permutations + ' Fitting Score'))
 
+    # Force the dtypes to numeric rather than objects
+    jedi_row = jedi_row.apply(pd.to_numeric, errors='ignore')
+
     return jedi_row
 
 

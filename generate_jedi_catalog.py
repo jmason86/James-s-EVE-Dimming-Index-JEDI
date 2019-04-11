@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import astropy.units as u
 from astropy.time import Time
 import time
-#import progressbar
 
 # Custom modules
 from jpm_number_printing import latex_float
@@ -67,11 +66,6 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
 
     if jedi_config.verbose:
         jedi_config.logger.info('Created JEDI row definition.')
-
-    # Start a progress bar
-    #widgets = [progressbar.Percentage(), progressbar.Bar(), progressbar.Timer(), ' ', progressbar.AdaptiveETA()]
-    #progress_bar = progressbar.ProgressBar(widgets=[progressbar.FormatLabel('Flare event loop: ')] + widgets,
-    #                                       min_value=flare_index_range[0], max_value=flare_index_range[-1]).start()
 
     # Compute all pre-flare irradiances if needed or because kwarg set
     if compute_new_preflare_irradiances or (os.path.isfile(jedi_config.preflare_csv_filename) is False):
@@ -154,9 +148,6 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
             loop_light_curve_fit(eve_lines_event, flare_index, uncertainty)
             print('Time to do fitting [s]: {0}'.format(time.time() - time_fitting))
 
-            # Force the array to use numeric types where applicable rather than objects
-            jedi_row = jedi_row.apply(pd.to_numeric, errors='ignore')
-
             # Save the dimming event data to disk for quicker restore
             jedi_row.to_hdf(processed_jedi_non_params_filename, 'jedi_row')
             eve_lines_event.to_hdf(processed_lines_filename, 'eve_lines_event')
@@ -170,21 +161,14 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
         determine_dimming_parameters(eve_lines_event, flare_index)
 
         # Produce a summary plot for each light curve
-        produce_summary_plot(eve_lines_event, flare_index) # TODO: Uncomment this
-
-        # Force the array to use numeric types where applicable rather than objects
-        jedi_row = jedi_row.apply(pd.to_numeric, errors='ignore')
+        #produce_summary_plot(eve_lines_event, flare_index)  # FIXME: Uncomment this
 
         # Write to the JEDI catalog on disk
         jedi_row.to_hdf('{0} Event {1}.h5'.format(jedi_config.jedi_hdf_filename, flare_index), key='jedi_row', mode='w')
         if jedi_config.verbose:
-            jedi_config.logger.info('Event {0} JEDI row written to {1}.'.format(flare_index, jedi_config.jedi_hdf_filename))
+            jedi_config.logger.info('Event {0} JEDI row written to {1}.'.format(jedi_config.jedi_hdf_filename, flare_index))
 
-        # Update progress bar
-        #progress_bar.update(flare_index)
         print('Total time for loop [s]: {0}'.format(time.time() - loop_time))
-
-    #progress_bar.finish()
 
 
 def map_flare_index_to_preflare_index(flare_index):
@@ -262,7 +246,7 @@ def clip_eve_data_to_dimming_window(flare_index):
 
     if ((bracket_time_right - bracket_time_left).sec / 60.0) < jedi_config.threshold_minimum_dimming_window_minutes:
         # Leave all dimming parameters as NaN and write this null result to the CSV on disk
-        jedi_row.to_hdf(jedi_config.jedi_hdf_filename, 'jedi_row')
+        jedi_row.to_hdf('{0} Event {1}.h5'.format(jedi_config.jedi_hdf_filename, flare_index), key='jedi_row', mode='w')
 
         # Log message
         if jedi_config.verbose:
@@ -421,8 +405,8 @@ def determine_dimming_parameters(eve_lines_event, flare_index):
             depth_path = jedi_config.output_path + 'Depth/'
 
             plt.close('all')
-            depth_first, depth_first_time, depth_max, depth_max_time = determine_dimming_depth(eve_line_event,
-                                                                                               plot_path_filename='{0}Event {1} {2} Depth.png'.format(depth_path, flare_index, column))
+            depth_first, depth_first_time, depth_max, depth_max_time = determine_dimming_depth(eve_line_event)#,  FIXME: Uncomment
+                                                                                               #plot_path_filename='{0}Event {1} {2} Depth.png'.format(depth_path, flare_index, column))
 
             # Make sure times haven't become NaT instead of NaN
             depth_first_time = valid_time(depth_first_time)
@@ -447,8 +431,8 @@ def determine_dimming_parameters(eve_lines_event, flare_index):
                 plt.close('all')
                 slope_min, slope_max, slope_mean = determine_dimming_slope(eve_line_event,
                                                                            earliest_allowed_time=slope_start_time,
-                                                                           latest_allowed_time=slope_end_time,
-                                                                           plot_path_filename='{0}Event {1} {2} Slope.png'.format(slope_path, flare_index, column))
+                                                                           latest_allowed_time=slope_end_time)#,
+                                                                           #plot_path_filename='{0}Event {1} {2} Slope.png'.format(slope_path, flare_index, column))
 
                 # Make sure times haven't become NaT instead of NaN
                 slope_start_time = valid_time(slope_start_time)
@@ -466,8 +450,8 @@ def determine_dimming_parameters(eve_lines_event, flare_index):
 
                 plt.close('all')
                 duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(eve_line_event,
-                                                                                                      earliest_allowed_time=slope_start_time,
-                                                                                                      plot_path_filename='{0}Event {1} {2} Duration.png'.format(duration_path, flare_index, column))
+                                                                                                      earliest_allowed_time=slope_start_time)#,
+                                                                                                      #plot_path_filename='{0}Event {1} {2} Duration.png'.format(duration_path, flare_index, column))
 
                 # Make sure times haven't become NaT instead of NaN
                 duration_start_time = valid_time(duration_start_time)
@@ -624,8 +608,10 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
     list_dfs = []
     for file in os.listdir(file_path):
         if file.endswith(".h5") and "merged" not in file:
-            jedi_rows = pd.read_hdf(os.path.join(file_path, file), 'jedi_row')
-            list_dfs.append(jedi_rows)
+            flare_index = int(file.split()[-1].split('.')[0])
+            if flare_index <= 2500:
+                jedi_rows = pd.read_hdf(os.path.join(file_path, file), 'jedi_row')
+                list_dfs.append(jedi_rows)
     jedi_catalog_df = pd.concat(list_dfs, ignore_index=True)
     jedi_catalog_df.dropna(axis=0, how='all', inplace=True)
     jedi_catalog_df.drop_duplicates(inplace=True)
@@ -649,5 +635,5 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
 
 
 if __name__ == '__main__':
-    #generate_jedi_catalog(range(362, 5052))
-    merge_jedi_catalog_files()
+    generate_jedi_catalog(range(1, 5052))
+    #merge_jedi_catalog_files()
