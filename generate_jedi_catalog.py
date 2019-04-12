@@ -607,11 +607,13 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
     # Create one sorted, clean dataframe from all of the csv files
     list_dfs = []
     for file in os.listdir(file_path):
-        if file.endswith(".h5") and "merged" not in file:
-            flare_index = int(file.split()[-1].split('.')[0])
-            if flare_index <= 2500:
-                jedi_rows = pd.read_hdf(os.path.join(file_path, file), 'jedi_row')
-                list_dfs.append(jedi_rows)
+        #if file.endswith(".h5") and "merged" not in file:
+        if file.endswith(".h5") and "merged" in file:
+            #flare_index = int(file.split()[-1].split('.')[0])
+            #if flare_index >= 2500:  # This is only here because the full JEDI merge is too big to do all at once with only 16 GB of RAM
+            #jedi_rows = pd.read_hdf(os.path.join(file_path, file), 'jedi_row')
+            jedi_rows = pd.read_hdf(os.path.join(file_path, file), 'jedi')
+            list_dfs.append(jedi_rows)
     jedi_catalog_df = pd.concat(list_dfs, ignore_index=True)
     jedi_catalog_df.dropna(axis=0, how='all', inplace=True)
     jedi_catalog_df.drop_duplicates(inplace=True)
@@ -635,5 +637,5 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
 
 
 if __name__ == '__main__':
-    generate_jedi_catalog(range(1, 5052))
-    #merge_jedi_catalog_files()
+    #generate_jedi_catalog(range(1, 5052))
+    merge_jedi_catalog_files()
