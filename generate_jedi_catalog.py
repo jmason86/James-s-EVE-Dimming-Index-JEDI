@@ -161,7 +161,7 @@ def generate_jedi_catalog(flare_index_range=range(0, 5052),
         determine_dimming_parameters(eve_lines_event, flare_index)
 
         # Produce a summary plot for each light curve
-        #produce_summary_plot(eve_lines_event, flare_index)  # FIXME: Uncomment this
+        produce_summary_plot(eve_lines_event, flare_index)
 
         # Write to the JEDI catalog on disk
         jedi_row.to_hdf('{0} Event {1}.h5'.format(jedi_config.jedi_hdf_filename, flare_index), key='jedi_row', mode='w')
@@ -405,8 +405,8 @@ def determine_dimming_parameters(eve_lines_event, flare_index):
             depth_path = jedi_config.output_path + 'Depth/'
 
             plt.close('all')
-            depth_first, depth_first_time, depth_max, depth_max_time = determine_dimming_depth(eve_line_event)#,  FIXME: Uncomment
-                                                                                               #plot_path_filename='{0}Event {1} {2} Depth.png'.format(depth_path, flare_index, column))
+            depth_first, depth_first_time, depth_max, depth_max_time = determine_dimming_depth(eve_line_event,
+                                                                                               plot_path_filename='{0}Event {1} {2} Depth.png'.format(depth_path, flare_index, column))
 
             # Make sure times haven't become NaT instead of NaN
             depth_first_time = valid_time(depth_first_time)
@@ -431,8 +431,8 @@ def determine_dimming_parameters(eve_lines_event, flare_index):
                 plt.close('all')
                 slope_min, slope_max, slope_mean = determine_dimming_slope(eve_line_event,
                                                                            earliest_allowed_time=slope_start_time,
-                                                                           latest_allowed_time=slope_end_time)#,
-                                                                           #plot_path_filename='{0}Event {1} {2} Slope.png'.format(slope_path, flare_index, column))
+                                                                           latest_allowed_time=slope_end_time,
+                                                                           plot_path_filename='{0}Event {1} {2} Slope.png'.format(slope_path, flare_index, column))
 
                 # Make sure times haven't become NaT instead of NaN
                 slope_start_time = valid_time(slope_start_time)
@@ -450,8 +450,8 @@ def determine_dimming_parameters(eve_lines_event, flare_index):
 
                 plt.close('all')
                 duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(eve_line_event,
-                                                                                                      earliest_allowed_time=slope_start_time)#,
-                                                                                                      #plot_path_filename='{0}Event {1} {2} Duration.png'.format(duration_path, flare_index, column))
+                                                                                                      earliest_allowed_time=slope_start_time,
+                                                                                                      plot_path_filename='{0}Event {1} {2} Duration.png'.format(duration_path, flare_index, column))
 
                 # Make sure times haven't become NaT instead of NaN
                 duration_start_time = valid_time(duration_start_time)
