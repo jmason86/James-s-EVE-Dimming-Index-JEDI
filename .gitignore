@@ -6,6 +6,7 @@
 ########
 *cache*
 .ipynb*
+.ipynb_checkpoints*
 
 # OS generated files #
 ######################
