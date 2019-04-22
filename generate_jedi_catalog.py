@@ -296,7 +296,7 @@ def loop_light_curve_peak_match_subtract(eve_lines_event, flare_index):
 
         if (light_curve_to_subtract_from_df.isnull().all().all()) or (light_curve_to_subtract_with_df.isnull().all().all()):
             if jedi_config.verbose:
-                jedi_config.logger.info(
+                jedi_config.logger.warning(
                     'Event {0} {1} correction skipped because all irradiances are NaN.'.format(flare_index,
                                                                                                jedi_config.ion_permutations[i]))
         else:
