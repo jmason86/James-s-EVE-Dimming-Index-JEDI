@@ -67,7 +67,7 @@ def determine_dimming_duration(light_curve_df,
     zero_crossing_indices = zero_crossing_indices[zero_crossing_times > earliest_allowed_time]
     if zero_crossing_indices.size == 0:
         if jedi_config.verbose:
-            jedi_config.logger.warning('No zero crossings detected after earliest allowed time of %s' % earliest_allowed_time)
+            jedi_config.logger.warning('No zero crossings detected after earliest allowed time of {}'.format(earliest_allowed_time))
         found_duration = False
 
     # Figure out which way the light curve is sloping
@@ -103,7 +103,7 @@ def determine_dimming_duration(light_curve_df,
             jedi_config.logger.warning('Dimming light curve may be misaligned in window. Negative slope 0-crossing detected after positive one.')
         found_duration = False
 
-    # Return the time difference in seconds between the selected zero crossings
+    # Define the time difference in seconds between the selected zero crossings
     if found_duration:
         duration_seconds = int((first_pos_zero_crossing_time - first_neg_zero_crossing_time).total_seconds())
 
@@ -138,7 +138,7 @@ def determine_dimming_duration(light_curve_df,
 
         plt.savefig(plot_path_filename)
         if jedi_config.verbose:
-            jedi_config.logger.info("Summary plot saved to %s" % plot_path_filename)
+            jedi_config.logger.info("Summary plot saved to {}".format(plot_path_filename))
 
     if not found_duration:
         duration_seconds = np.nan
