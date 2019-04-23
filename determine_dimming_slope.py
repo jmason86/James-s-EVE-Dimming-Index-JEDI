@@ -135,5 +135,4 @@ def determine_dimming_slope(light_curve_df,
         if jedi_config.verbose:
             jedi_config.logger.info("Summary plot saved to %s" % plot_path_filename)
 
-    # Return the slopes
     return slope_min, slope_max, slope_mean
