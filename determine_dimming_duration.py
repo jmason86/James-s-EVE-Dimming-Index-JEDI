@@ -106,6 +106,7 @@ def determine_dimming_duration(light_curve_df,
     # Define the time difference in seconds between the selected zero crossings
     if found_duration:
         duration_seconds = int((first_pos_zero_crossing_time - first_neg_zero_crossing_time).total_seconds())
+        jedi_config.logger.info('Duration determined to be {} seconds'.format(duration_seconds))
 
     if plot_path_filename:
         plt.style.use('jpm-transparent-light')
