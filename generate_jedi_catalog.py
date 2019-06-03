@@ -245,7 +245,7 @@ def clip_eve_data_to_dimming_window(flare_index):
     jedi_row['Flare Interrupt'] = flare_interrupt
 
     if ((bracket_time_right - bracket_time_left).sec / 60.0) < jedi_config.threshold_minimum_dimming_window_minutes:
-        # Leave all dimming parameters as NaN and write this null result to the CSV on disk
+        # Leave all dimming parameters as NaN and write this null result to the disk
         jedi_row.to_hdf('{0} Event {1}.h5'.format(jedi_config.jedi_hdf_filename, flare_index), key='jedi_row', mode='w')
 
         # Log message
@@ -637,5 +637,5 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
 
 
 if __name__ == '__main__':
-    #generate_jedi_catalog(range(1, 5052))
-    merge_jedi_catalog_files()
+    generate_jedi_catalog(range(32, 5052))
+    #merge_jedi_catalog_files()
