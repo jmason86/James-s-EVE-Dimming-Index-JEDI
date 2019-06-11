@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/106585212.svg)](https://zenodo.org/badge/latestdoi/106585212)
+
 # James-s-EVE-Dimming-Index-JEDI
 The purpose of this repository of code is to search for and characterize coronal dimming in light curves produced from the Solar Dynamics Observatory (SDO) Extreme Ultraviolet (EUV) Variability Experiment (EVE). 
 
@@ -13,7 +15,7 @@ The code also presently uses an IDL saveset that I produced spanning the same er
 Ultimately, the input of EVE data will change to use [sunpy](https://github.com/sunpy/sunpy)'s Fido to fetch the data as needed. The [code for that exists in part](https://github.com/jmason86/sunpy/tree/add_eve_level2_timeseries), but is waiting for [an issue with custom Time classes in astropy](https://github.com/astropy/astropy/issues/7092) to be resolved. The GOES IDL saveset will also be replaced by [sunpy](https://github.com/sunpy/sunpy)'s function: [get_goes_event_list](http://docs.sunpy.org/en/stable/api/sunpy.instr.goes.get_goes_event_list.html#sunpy.instr.goes.get_goes_event_list), but is waiting for [an issue with multi-month requests](https://github.com/sunpy/sunpy/issues/2434) to be resolved.
 
 ### Output
-The main output of the code is [a really big csv file](https://www.dropbox.com/s/9hq4wesftkqw4rc/jedi_v1.csv?dl=0). Each row is a different event. There are 24303 columns, which include various timestamps, flags, and the primary product: dimming depth, slope, and duration for each of the 39 emission lines and every pair permutation of those emission lines. The pairing is done to apply a flare peak removal algorithm, [light_curve_peak_match_subtract](light_curve_peak_match_subtract.py). 
+The main output of the code is [a really big csv file](https://www.dropbox.com/s/9hq4wesftkqw4rc/jedi_v1.csv?dl=0). Each row is a different event. There are 27349 columns, which include various timestamps, flags, and the primary product: dimming depth, slope, and duration for each of the 39 emission lines and every pair permutation of those emission lines. The pairing is done to apply a flare peak removal algorithm, [light_curve_peak_match_subtract](light_curve_peak_match_subtract.py). 
 
 Additionally, an output option is to produce plots for each step in processing in order to do some sanity checks on what the various algorithms did. There's also a final summary plot produced that shows the fitted light curve with any dimming parameters annotated (see example below).
 
