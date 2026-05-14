@@ -11,9 +11,9 @@ import itertools
 from jpm_logger import JpmLogger
 
 # Declare variables to be accessed by anything that imports this module
-eve_data_path = '/Users/jmason86/Dropbox/Research/Data/EVE/eve_lines_2010121-2014146 MEGS-A Mission Bare Bones.sav'
-goes_data_path = '/Users/jmason86/Dropbox/Research/Data/GOES/events/GoesEventsC1MinMegsAEra.sav'
-output_path = '/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'
+eve_data_path = os.path.expanduser('~/Dropbox/Research/Data/SDO/EVE/eve_lines_2010121-2014146 MEGS-A Mission Bare Bones.sav')
+goes_data_path = os.path.expanduser('~/Dropbox/Research/Data/GOES/events/GoesEventsC1MinMegsAEra.sav')
+output_path = os.path.expanduser('~/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/')
 logger_filename = 'generate_jedi_catalog'
 
 threshold_time_prior_flare_minutes = 300.0
