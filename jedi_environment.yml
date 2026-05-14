@@ -1,0 +1,32 @@
+name: jedi
+channels:
+  - plotly
+  - conda-forge
+  - anaconda-fusion
+  - defaults
+dependencies:
+  - python=3.9
+  - astropy
+  - matplotlib
+  - scipy
+  - numpy
+  - pandas
+  - scikit-learn
+  - scikit-image
+  - seaborn
+  - jupyter
+  - ipykernel
+  - ipywidgets
+  - plotly
+  - sunpy
+  - statsmodels
+  - networkx
+  - pillow
+  - hdf5
+  - pip
+  - pip:
+    - colorlover
+    - cufflinks
+    - peakutils
+    - requests
+
