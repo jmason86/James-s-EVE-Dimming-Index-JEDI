@@ -1,0 +1,9 @@
+@software{MasonJediRepo2019,
+  author = {Mason, James Paul},
+  doi = {10.5281/zenodo.3243634},
+  month = {6},
+  title = {{James's EVE Dimming Index (JEDI)}},
+  url = {https://doi.org/10.5281/zenodo.3243634},
+  version = {2.0.0},
+  year = {2019}
+}
