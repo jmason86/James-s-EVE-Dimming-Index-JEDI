@@ -43,6 +43,10 @@ def determine_dimming_duration(light_curve_df,
     if not earliest_allowed_time:
         earliest_allowed_time = pd.Timestamp(light_curve_df.index.values[0])
 
+    # Ensure earliest_allowed_time is timezone-aware (UTC)
+    if earliest_allowed_time.tzinfo is None or pd.isna(earliest_allowed_time.tzinfo):
+        earliest_allowed_time = earliest_allowed_time.tz_localize('UTC')
+
     if jedi_config.verbose:
         jedi_config.logger.info("Running on event with light curve start time of {0}.".format(light_curve_df.index[0]))
 
@@ -62,6 +66,9 @@ def determine_dimming_duration(light_curve_df,
     # Find the indices where the light curve is closest to 0
     zero_crossing_indices = np.where(np.diff(np.signbit(light_curve_df['smooth'])))[0]
     zero_crossing_times = light_curve_df.index[zero_crossing_indices]
+
+    # Ensure zero_crossing_times are timezone-aware (UTC)
+    zero_crossing_times = zero_crossing_times.tz_localize('UTC', ambiguous='NaT', nonexistent='shift_forward') if zero_crossing_times.tz is None else zero_crossing_times
 
     # Discard any indices prior to the user-provided earliest_allowed_time, else cannot compute
     zero_crossing_indices = zero_crossing_indices[zero_crossing_times > earliest_allowed_time]
