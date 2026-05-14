@@ -1,5 +1,6 @@
 # Standard modules
 import os
+import sys
 import numpy as np
 import matplotlib as mpl
 #mpl.use('macosx')  # For interactive plotting
@@ -10,6 +11,9 @@ import matplotlib.pyplot as plt
 import astropy.units as u
 from astropy.time import Time
 import time
+
+# Add python_convenience_functions to path
+sys.path.append(os.path.expanduser('~/Dropbox/Development/Python/python_convenience_functions'))
 
 # Custom modules
 from jpm_number_printing import latex_float
@@ -199,11 +203,16 @@ def map_flare_index_to_preflare_index(flare_index):
     Example:
         preflare_index = map_flare_index_to_preflare_index(flare_index)
     """
-    is_independent_flare = jedi_config.all_minutes_since_last_flare > jedi_config.threshold_time_prior_flare_minutes
-    all_flare_indices = range(0, is_independent_flare.size)
-    independent_flare_indices = np.where(is_independent_flare)[0]
-    sidx = np.searchsorted(independent_flare_indices, all_flare_indices, 'right') - 1
-    return sidx[flare_index]
+    preflare_indices = jedi_config.preflare_indices
+
+    # For a given flare_index, find the rightmost preflare_index that is <= flare_index
+    # np.searchsorted returns the insertion point, so subtract 1 to get the index of the last preflare_index <= flare_index
+    idx = np.searchsorted(preflare_indices, flare_index, side='right') - 1
+
+    if idx < 0:
+        raise ValueError(f"No valid preflare_index found for flare_index {flare_index} (flare occurs before any independent flare).")
+
+    return idx
 
 
 def clip_eve_data_to_dimming_window(flare_index):
@@ -302,8 +311,8 @@ def loop_light_curve_peak_match_subtract(eve_lines_event, flare_index):
         else:
             light_curve_corrected, seconds_shift, scale_factor = light_curve_peak_match_subtract(light_curve_to_subtract_from_df,
                                                                                                  light_curve_to_subtract_with_df,
-                                                                                                 pd.Timestamp((jedi_config.goes_flare_events['peak_time'][flare_index]).iso),
-                                                                                                 plot_path_filename=jedi_config.output_path + 'Peak Subtractions/Event {0} {1}.png'.format(flare_index, jedi_config.ion_permutations[i]))
+                                                                                                 pd.Timestamp((jedi_config.goes_flare_events['peak_time'][flare_index]).iso, tz='UTC'))
+                                                                                                 #plot_path_filename=jedi_config.output_path + 'Peak Subtractions/Event {0} {1}.png'.format(flare_index, jedi_config.ion_permutations[i]))
 
             eve_lines_event[jedi_config.ion_permutations[i]] = light_curve_corrected
             jedi_row[jedi_config.ion_permutations[i] + ' Correction Time Shift [s]'] = seconds_shift
@@ -354,7 +363,10 @@ def loop_light_curve_fit(eve_lines_event, flare_index, uncertainty):
             light_curve_fit_df, best_fit_gamma, best_fit_score = light_curve_fit(eve_line_event,
                                                                                  gamma=np.array([5e-8]),
                                                                                  plots_save_path='{0}Event {1} {2}'.format(fitting_path, flare_index, column))
-            eve_lines_event[column] = light_curve_fit_df
+            if isinstance(light_curve_fit_df, float) and np.isnan(light_curve_fit_df):
+                eve_lines_event[column] = np.nan
+            else:
+                eve_lines_event[column] = light_curve_fit_df['irradiance']
             jedi_row[column + ' Fitting Gamma'] = best_fit_gamma
             jedi_row[column + ' Fitting Score'] = best_fit_score
 
@@ -405,8 +417,8 @@ def determine_dimming_parameters(eve_lines_event, flare_index):
             depth_path = jedi_config.output_path + 'Depth/'
 
             plt.close('all')
-            depth_first, depth_first_time, depth_max, depth_max_time = determine_dimming_depth(eve_line_event,
-                                                                                               plot_path_filename='{0}Event {1} {2} Depth.png'.format(depth_path, flare_index, column))
+            depth_first, depth_first_time, depth_max, depth_max_time = determine_dimming_depth(eve_line_event)
+                                                                                               #plot_path_filename='{0}Event {1} {2} Depth.png'.format(depth_path, flare_index, column))
 
             # Make sure times haven't become NaT instead of NaN
             depth_first_time = valid_time(depth_first_time)
@@ -431,8 +443,8 @@ def determine_dimming_parameters(eve_lines_event, flare_index):
                 plt.close('all')
                 slope_min, slope_max, slope_mean = determine_dimming_slope(eve_line_event,
                                                                            earliest_allowed_time=slope_start_time,
-                                                                           latest_allowed_time=slope_end_time,
-                                                                           plot_path_filename='{0}Event {1} {2} Slope.png'.format(slope_path, flare_index, column))
+                                                                           latest_allowed_time=slope_end_time)
+                                                                           #plot_path_filename='{0}Event {1} {2} Slope.png'.format(slope_path, flare_index, column))
 
                 # Make sure times haven't become NaT instead of NaN
                 slope_start_time = valid_time(slope_start_time)
@@ -450,8 +462,8 @@ def determine_dimming_parameters(eve_lines_event, flare_index):
 
                 plt.close('all')
                 duration_seconds, duration_start_time, duration_end_time = determine_dimming_duration(eve_line_event,
-                                                                                                      earliest_allowed_time=slope_start_time,
-                                                                                                      plot_path_filename='{0}Event {1} {2} Duration.png'.format(duration_path, flare_index, column))
+                                                                                                      earliest_allowed_time=slope_start_time)
+                                                                                                      #plot_path_filename='{0}Event {1} {2} Duration.png'.format(duration_path, flare_index, column))
 
                 # Make sure times haven't become NaT instead of NaN
                 duration_start_time = valid_time(duration_start_time)
@@ -516,6 +528,12 @@ def produce_summary_plot(eve_lines_event, flare_index):
         duration_seconds = jedi_row[column + ' Duration [s]'].values[0]
         duration_start_time = jedi_row[column + ' Duration Start Time'].values[0]
         duration_end_time = jedi_row[column + ' Duration End Time'].values[0]
+
+        # Force slope_start_time and slope_end_time to be UTC timezone-aware
+        if isinstance(slope_start_time, np.datetime64):
+            slope_start_time = pd.to_datetime(slope_start_time).tz_localize('UTC')
+        if isinstance(slope_end_time, np.datetime64):
+            slope_end_time = pd.to_datetime(slope_end_time).tz_localize('UTC')
 
         if type(duration_end_time) is np.datetime64:
             plot_window_end_time = duration_end_time + np.timedelta64(1, 'h')
@@ -585,18 +603,18 @@ def produce_summary_plot(eve_lines_event, flare_index):
             jedi_config.logger.info("Summary plot saved to %s" % summary_filename)
 
 
-def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'):
-    """Function for merging the .csv output files of generate_jedi_catalog()
+def merge_jedi_catalog_files(file_path=os.path.expanduser('~/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/')):
+    """Function for merging the output files of generate_jedi_catalog()
 
     Inputs:
         None.
 
     Optional Inputs:
         file_path [str]: Set to a path for saving the JEDI catalog table.
-                         Default is '/Users/jmason86/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
+                         Default is '~/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/'.
 
     Outputs:
-        No direct return, but writes a csv to disk with the dimming parameterization results.
+        No direct return, but writes a file to disk with the dimming parameterization results.
 
     Optional Outputs:
         None.
@@ -607,11 +625,11 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
     # Create one sorted, clean dataframe from all of the csv files
     list_dfs = []
     for file in os.listdir(file_path):
-        #if file.endswith(".h5") and "merged" not in file:
+        #if file.endswith(".h5") and "merged" not in file and "_v" not in file:
         if file.endswith(".h5") and "merged" in file:
             #flare_index = int(file.split()[-1].split('.')[0])
             #if flare_index >= 2500:  # This is only here because the full JEDI merge is too big to do all at once with only 16 GB of RAM
-            #jedi_rows = pd.read_hdf(os.path.join(file_path, file), 'jedi_row')
+                #jedi_rows = pd.read_hdf(os.path.join(file_path, file), 'jedi_row')
             jedi_rows = pd.read_hdf(os.path.join(file_path, file), 'jedi')
             list_dfs.append(jedi_rows)
     jedi_catalog_df = pd.concat(list_dfs, ignore_index=True)
@@ -623,7 +641,7 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
     jedi_row_standard = jedi_config.init_jedi_row()
     cols = jedi_row_standard.columns.tolist()
     jedi_catalog_df = jedi_catalog_df[cols]
-    jedi_catalog_df = jedi_catalog_df.apply(pd.to_numeric, errors='ignore')
+    #jedi_catalog_df = jedi_catalog_df.apply(pd.to_numeric, errors='ignore')  # FIXME: This ruins the timestamps that are string format -- what is this even needed for?
     if jedi_config.verbose:
         print("Read files, sorted, dropped empty and duplicate rows, and reset index.")
 
@@ -635,7 +653,14 @@ def merge_jedi_catalog_files(file_path='/Users/jmason86/Dropbox/Research/Postdoc
 
     return 1
 
+def read_jedi_v2():
+    """Reads the jedi_v2.h5 file into a variable called jedi."""
+    jedi = pd.read_hdf('/Users/masonjp2/Dropbox/Research/Postdoc_NASA/Analysis/Coronal Dimming Analysis/JEDI Catalog/jedi_v2.h5')
+    return jedi
+
+
 
 if __name__ == '__main__':
-    generate_jedi_catalog(range(32, 5052))
+    #generate_jedi_catalog(range(15, 20)) # min = 0, max = 5052
+    generate_jedi_catalog([3672, 3673, 3674, 3675, 3676, 3677, 3684, 3685, 3687, 3688, 3689, 3690, 3691, 3695, 3696, 3697, 3698, 3700, 3701, 3703, 3704, 3705, 3707, 3709, 3711, 3713, 3715, 3742, 3745, 3746, 3752, 3753, 3785, 3795, 3796, 3802, 3804, 3806, 3809, 3830, 3900, 3908, 3920, 3922, 3924, 3925, 3929, 3932, 3935, 3936, 3947, 3948, 3949, 3956, 3971, 3999, 4000, 4001, 4002, 4023, 4025, 4034, 4076, 4078, 4088, 4118, 4122, 4126, 4127, 4133, 4135, 4137, 4142, 4153, 4163, 4164, 4165, 4169, 4170, 4171, 4172, 4175, 4176, 4177, 4178, 4179, 4181, 4182, 4185, 4187, 4191, 4194, 4195, 4199, 4200, 4201, 4202, 4203, 4208, 4209, 4211, 4213, 4218, 4223, 4224, 4227, 4228, 4231, 4235, 4236, 4239, 4241, 4242, 4243, 4247, 4253, 4262, 4299, 4304, 4307, 4316, 4318, 4323, 4325, 4331, 4343, 4346, 4355, 4357, 4359, 4363, 4378, 4382, 4386, 4388, 4389, 4390, 4391, 4399, 4409, 4410, 4411, 4413, 4414, 4418, 4425, 4426, 4428, 4430, 4431, 4432, 4433, 4434, 4436, 4455, 4457, 4460, 4462, 4463, 4464, 4465, 4467, 4470, 4477, 4505, 4511, 4512, 4517, 4572, 4590, 4599, 4602, 4604, 4607, 4608, 4613, 4617, 4618, 4620, 4621, 4623, 4658, 4662, 4674, 4675, 4678, 4685, 4691, 4695, 4696, 4697, 4699, 4700, 4701, 4702, 4715, 4718, 4722, 4723, 4725, 4728, 4743, 4746, 4749, 4751, 4754, 4758, 4778, 4784, 4787, 4789, 4790, 4793, 4794, 4795, 4829, 4832, 4834, 4836, 4839, 4843, 4850, 4853, 4857, 4860, 4861, 4863, 4865, 4882, 4884, 4890, 4912, 4915, 4918, 4921, 4923, 4926, 4927, 4950, 4957, 4965, 4966, 4970, 4985, 4987, 4988, 4990, 5000, 5002, 5003, 5005, 5008, 5009, 5010, 5011, 5015, 5018, 5021, 5025, 5027, 5028, 5044])
     #merge_jedi_catalog_files()
