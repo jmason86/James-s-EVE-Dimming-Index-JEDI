@@ -63,8 +63,10 @@ def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10),
         if np.isnan(y).any():
             jedi_config.logger.warning("There are NaN values in light curve. Dropping them.")
     finite_irradiance_indices = np.isfinite(y)
+    X_all = X.reshape(len(X), 1)
     X = X[finite_irradiance_indices]
     X = X.reshape(len(X), 1)  # Format to be compatible with validation_curve and SVR.fit()
+    uncertainty_all = light_curve_df.uncertainty
     uncertainty = light_curve_df.uncertainty[np.isfinite(y)]
     y = y[finite_irradiance_indices]
 
@@ -83,9 +85,15 @@ def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10),
 
     # Generate the validation curve -- test all them gammas!
     # Parallel with n_jobs has absolutely no impact on processing time
-    train_score, val_score = validation_curve(jpm_svr(), X, y,
-                                              'svr__gamma',
-                                              gamma, cv=shuffle_split, scoring=evs)
+    train_score, val_score = validation_curve(
+        estimator=jpm_svr(),
+        X=X,
+        y=y,
+        param_name='svr__gamma',
+        param_range=gamma,
+        cv=shuffle_split,
+        scoring=evs
+    )
 
     if jedi_config.verbose:
         jedi_config.logger.info("Validation curve complete.")
@@ -129,7 +137,7 @@ def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10),
     # Otherwise train and fit the best model
     sample_weight = 1 / uncertainty
     model = SVR(kernel='rbf', C=1e3, gamma=best_fit_gamma).fit(X, y, sample_weight)
-    y_fit = model.predict(X)
+    y_fit = model.predict(X_all)
 
     if jedi_config.verbose:
         jedi_config.logger.info("Best model trained and fitted.")
@@ -137,7 +145,7 @@ def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10),
     if plots_save_path:
         plt.clf()
         plt.errorbar(X.ravel(), y, yerr=uncertainty, color='black', fmt='o', label='Input light curve', zorder=1)
-        plt.plot(X.ravel(), y_fit, linewidth=6, label='Fit', zorder=2)
+        plt.plot(X_all.ravel(), y_fit, linewidth=6, label='Fit', zorder=2)
         plt.title("t$_0$ = " + datetimeindex_to_human(light_curve_df.index)[0])
         plt.xlabel('time [seconds since start]')
         plt.ylabel('irradiance [%]')
@@ -152,12 +160,12 @@ def light_curve_fit(light_curve_df, gamma=np.logspace(-10, -5, num=20, base=10),
 
     # TODO: Get uncertainty of fit at each point... if that's even possible
     # Placeholder for now just so that the function can complete: output uncertainty = input uncertainty
-    fit_uncertainty = uncertainty
+    fit_uncertainty = uncertainty_all
 
     # Construct a pandas DataFrame with DatetimeIndex, y_fit, and fit_uncertainty
     light_curve_fit_df = pd.DataFrame({'irradiance': y_fit,
                                        'uncertainty': fit_uncertainty})
-    light_curve_fit_df.index = light_curve_df.index[finite_irradiance_indices]
+    light_curve_fit_df.index = light_curve_df.index
     if jedi_config.verbose:
         jedi_config.logger.info("Created output DataFrame")
 
