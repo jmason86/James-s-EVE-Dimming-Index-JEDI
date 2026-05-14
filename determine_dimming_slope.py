@@ -56,6 +56,12 @@ def determine_dimming_slope(light_curve_df,
         latest_allowed_time = light_curve_df.index[-1]
         jedi_config.logger.info("No latest allowed time provided. Setting to end of light curve: {0}".format(latest_allowed_time))
 
+    # Ensure earliest_allowed_time and latest_allowed_time are pandas Timestamps with UTC timezone
+    if earliest_allowed_time.tzinfo is None or pd.isna(earliest_allowed_time.tzinfo):
+        earliest_allowed_time = earliest_allowed_time.tz_localize('UTC')
+    if latest_allowed_time.tzinfo is None or pd.isna(latest_allowed_time.tzinfo):
+        latest_allowed_time = latest_allowed_time.tz_localize('UTC')
+
     # Optionally smooth the light curve with a rolling mean
     if smooth_points:
         light_curve_df['irradiance'] = light_curve_df.rolling(smooth_points, center=True).mean()
